@@ -3,8 +3,6 @@ import Video from '../models/Video.js';
 import generateToken from '../utils/generateToken.js';
 import { OAuth2Client } from 'google-auth-library';
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
 // @desc    Auth user & get token
 // @route   POST /api/auth/login
 // @access  Public
@@ -191,6 +189,7 @@ export const googleAuth = async (req, res) => {
       return res.status(400).json({ message: 'No Google token provided' });
     }
 
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
     const ticket = await client.verifyIdToken({
       idToken: token,
       audience: process.env.GOOGLE_CLIENT_ID,
