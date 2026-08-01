@@ -11,6 +11,7 @@ import VideoDetail from './pages/VideoDetail'
 import Analyze from './pages/Result'
 import Profile from './pages/Profile'
 import Leaderboard from './pages/Leaderboard'
+import Notifications from './pages/Notifications'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import useAuthStore from './store/useAuthStore'
@@ -36,6 +37,7 @@ function App() {
           <Route path="/topics/:id/community" element={<TopicCommunity />} />
           <Route path="/video/:id" element={<VideoDetail />} />
           <Route path="/analyze/:id" element={<Analyze />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
         </Routes>

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
+import useNotificationStore from '../store/useNotificationStore';
 import { Mic, LogOut, Compass, Trophy, User as UserIcon, Bell, Flame, Menu, X, Home } from 'lucide-react';
 
 const Navbar = () => {
   const { isAuthenticated, user, logout, fetchProfile } = useAuthStore();
+  const { unreadCount, fetchUnreadCount } = useNotificationStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -17,8 +19,16 @@ const Navbar = () => {
   useEffect(() => {
     if (isAuthenticated) {
       fetchProfile();
+      fetchUnreadCount();
+      
+      // Poll for notifications every 30 seconds
+      const intervalId = setInterval(() => {
+        fetchUnreadCount();
+      }, 30000);
+      
+      return () => clearInterval(intervalId);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchProfile, fetchUnreadCount]);
 
   const handleLogout = () => {
     logout();
@@ -71,7 +81,9 @@ const Navbar = () => {
 
                 <Link to="/notifications" className="p-2 text-gray-400 hover:text-indigo-600 transition-colors relative">
                   <Bell size={20} />
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                  )}
                 </Link>
 
                 <Link to="/profile" className="flex items-center gap-2 hover:bg-gray-50 px-2 py-1 rounded-lg transition-colors">

@@ -1,6 +1,7 @@
 import Video from '../models/Video.js';
 import Topic from '../models/Topic.js';
 import User from '../models/User.js';
+import Notification from '../models/Notification.js';
 import { uploadVideoToCloudinary } from '../services/cloudinaryService.js';
 import { analyzeVideoWithGemini, analyzeTextWithGemini } from '../services/geminiService.js';
 
@@ -216,6 +217,17 @@ export const addReview = async (req, res) => {
     video.reviews.push(review);
     await video.save();
 
+    // Create notification for the video owner
+    if (video.user.toString() !== req.user._id.toString()) {
+      await Notification.create({
+        recipient: video.user,
+        sender: req.user._id,
+        type: 'review',
+        video: video._id,
+        message: 'left a review on your speech'
+      });
+    }
+
     // Re-fetch with populated user so the frontend has avatar/name immediately
     const updatedVideo = await Video.findById(req.params.id)
       .populate('user', 'name avatar')
@@ -246,9 +258,23 @@ export const toggleStar = async (req, res) => {
     if (index === -1) {
       // Star
       video.stars.push(userId);
+      
+      // Create notification
+      if (video.user.toString() !== userId.toString()) {
+        await Notification.create({
+          recipient: video.user,
+          sender: userId,
+          type: 'star',
+          video: video._id,
+          message: 'starred your speech'
+        });
+      }
     } else {
       // Unstar
       video.stars.splice(index, 1);
+      
+      // Optional: We could delete the notification if they unstar, but usually platforms leave it or delete it.
+      // We will leave it simple for now.
     }
 
     await video.save();

@@ -5,6 +5,7 @@ import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import topicRoutes from './routes/topicRoutes.js';
 import videoRoutes from './routes/videoRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/topics', topicRoutes);
 app.use('/api/videos', videoRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Basic Route
 app.get('/', (req, res) => {
