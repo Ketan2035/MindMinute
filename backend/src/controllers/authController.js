@@ -229,6 +229,6 @@ export const googleAuth = async (req, res) => {
 
   } catch (error) {
     console.error('Google Auth Error:', error);
-    res.status(401).json({ message: 'Invalid Google token' });
+    res.status(401).json({ message: `Google Auth Error: ${error.message || 'Invalid token'}` });
   }
 };
