@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import axios from 'axios';
+
 import useAuthStore from './useAuthStore';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const useNotificationStore = create((set, get) => ({
   notifications: [],
@@ -14,7 +17,7 @@ const useNotificationStore = create((set, get) => ({
     
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get('http://localhost:5000/api/notifications', {
+      const response = await axios.get(`${API_BASE_URL}/api/notifications`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
       set({ notifications: response.data, isLoading: false });
@@ -28,7 +31,7 @@ const useNotificationStore = create((set, get) => ({
     if (!user) return;
     
     try {
-      const response = await axios.get('http://localhost:5000/api/notifications/unread-count', {
+      const response = await axios.get(`${API_BASE_URL}/api/notifications/unread-count`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
       set({ unreadCount: response.data.count });
@@ -42,7 +45,7 @@ const useNotificationStore = create((set, get) => ({
     if (!user) return;
     
     try {
-      await axios.put(`http://localhost:5000/api/notifications/${id}/read`, {}, {
+      await axios.put(`${API_BASE_URL}/api/notifications/${id}/read`, {}, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
       

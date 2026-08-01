@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Mic, Sparkles, LineChart, RefreshCw, Target, Clock, Loader2, BrainCircuit } from 'lucide-react';
 import axios from 'axios';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const DUMMY_CATEGORIES = ['General', 'Business', 'Technology', 'Debate', 'Interview', 'Philosophy', 'Science'];
 
 const Home = () => {
@@ -28,7 +30,7 @@ const Home = () => {
     }, 100);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/topics/generate');
+      const response = await axios.post(`${API_BASE_URL}/api/topics/generate`);
 
       setTimeout(() => {
         clearInterval(interval);

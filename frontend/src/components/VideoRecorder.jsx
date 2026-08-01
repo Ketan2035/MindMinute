@@ -5,6 +5,8 @@ import useAuthStore from '../store/useAuthStore';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const MINIMUM_RECORDING_TIME = 10; // seconds
 const MAXIMUM_RECORDING_TIME = 60; // seconds
 const VideoRecorder = ({ topic, onUploadSuccess }) => {
@@ -216,7 +218,7 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
     formData.append('mediaType', useCamera ? 'video' : 'audio');
 
     try {
-      const response = await axios.post('http://localhost:5000/api/videos', formData, {
+      const response = await axios.post(`${API_BASE_URL}/api/videos`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${user?.token}`,
@@ -239,7 +241,7 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
 
     setUploading(true);
     try {
-      const response = await axios.post('http://localhost:5000/api/videos/text-only', 
+      const response = await axios.post(`${API_BASE_URL}/api/videos/text-only`, 
         { topicId: topic._id, transcript: liveTranscript.trim() },
         {
           headers: {

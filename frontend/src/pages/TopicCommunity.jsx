@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Users, Play, BrainCircuit, MessageSquare, Star } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const TopicCommunity = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -20,12 +22,12 @@ const TopicCommunity = () => {
     const fetchData = async () => {
       try {
         // Fetch Topic Details
-        const topicRes = await axios.get(`http://localhost:5000/api/topics/${id}`);
+        const topicRes = await axios.get(`${API_BASE_URL}/api/topics/${id}`);
         setTopic(topicRes.data);
 
         // Fetch Community Videos for this topic
-        const videosRes = await axios.get(`http://localhost:5000/api/videos/topic/${id}/community`, {
-          headers: { Authorization: `Bearer ${user?.token}` }
+        const videosRes = await axios.get(`${API_BASE_URL}/api/videos/topic/${id}/community`, {
+          headers: user ? { Authorization: `Bearer ${user.token}` } : {}
         });
         setVideos(videosRes.data);
       } catch (err) {

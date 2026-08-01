@@ -41,6 +41,9 @@ export const registerUser = async (req, res) => {
     const userExists = await User.findOne({ email });
 
     if (userExists) {
+      if (userExists.googleId && !userExists.password) {
+        return res.status(400).json({ message: 'This email is already registered via Google. Please log in with Google.' });
+      }
       return res.status(400).json({ message: 'User already exists' });
     }
 

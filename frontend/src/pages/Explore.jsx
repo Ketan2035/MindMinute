@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
 import CustomVideoPlayer from '../components/CustomVideoPlayer';
 import useAuthStore from '../store/useAuthStore';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const Explore = () => {
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +19,7 @@ const Explore = () => {
   useEffect(() => {
     const fetchFeed = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/videos/explore');
+        const res = await axios.get(`${API_BASE_URL}/api/videos/explore`);
         setFeed(res.data);
       } catch (err) {
         console.error('Failed to fetch global feed', err);
@@ -36,7 +38,7 @@ const Explore = () => {
     }
 
     try {
-      const res = await axios.post(`http://localhost:5000/api/videos/${videoId}/star`,
+      const res = await axios.post(`${API_BASE_URL}/api/videos/${videoId}/star`,
         {},
         { headers: { Authorization: `Bearer ${user.token}` } }
       );

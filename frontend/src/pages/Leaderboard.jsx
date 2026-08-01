@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Trophy, Flame, Star, Medal } from 'lucide-react';
+import { Trophy, Medal, Flame, Star, TrendingUp, Sparkles } from 'lucide-react';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 import useAuthStore from '../store/useAuthStore';
 
 const Leaderboard = () => {
@@ -11,7 +13,7 @@ const Leaderboard = () => {
   useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/auth/leaderboard');
+        const response = await axios.get(`${API_BASE_URL}/api/auth/leaderboard`);
         setUsers(response.data);
       } catch (err) {
         console.error('Failed to fetch leaderboard', err);

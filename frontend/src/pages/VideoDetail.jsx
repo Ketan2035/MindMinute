@@ -5,6 +5,8 @@ import { Target, MessageSquareQuote, Heart, ArrowLeft, Play, Pause, Volume2, Vol
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const VideoDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -27,7 +29,7 @@ const VideoDetail = () => {
   useEffect(() => {
     const fetchVideo = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/videos/${id}`);
+        const res = await axios.get(`${API_BASE_URL}/api/videos/${id}`);
         setVideo(res.data);
       } catch (err) {
         console.error('Failed to fetch video:', err);
@@ -48,7 +50,7 @@ const VideoDetail = () => {
     
     setSubmittingReview(true);
     try {
-      const res = await axios.post(`http://localhost:5000/api/videos/${video._id}/reviews`, 
+      const res = await axios.post(`${API_BASE_URL}/api/videos/${video._id}/reviews`, 
         { text: reviewText },
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
@@ -70,7 +72,7 @@ const VideoDetail = () => {
     }
     
     try {
-      const res = await axios.post(`http://localhost:5000/api/videos/${video._id}/star`, 
+      const res = await axios.post(`${API_BASE_URL}/api/videos/${video._id}/star`, 
         {},
         { headers: { Authorization: `Bearer ${user.token}` } }
       );

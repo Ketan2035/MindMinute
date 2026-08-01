@@ -5,6 +5,8 @@ import axios from 'axios';
 import useAuthStore from '../store/useAuthStore';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const Analyze = () => {
   const { id } = useParams();
   const [latestVideo, setLatestVideo] = useState(null);
@@ -15,7 +17,7 @@ const Analyze = () => {
 
   const fetchVideos = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/videos/${id}`, {
+      const response = await axios.get(`${API_BASE_URL}/api/videos/${id}`, {
         headers: { Authorization: `Bearer ${user?.token}` }
       });
       if (response.data) {

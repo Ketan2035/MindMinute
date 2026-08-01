@@ -6,6 +6,8 @@ import VideoRecorder from '../components/VideoRecorder';
 import useAuthStore from '../store/useAuthStore';
 import { motion } from 'framer-motion';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const TopicDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -17,7 +19,7 @@ const TopicDetail = () => {
   useEffect(() => {
     const fetchTopic = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/topics/${id}`);
+        const response = await axios.get(`${API_BASE_URL}/api/topics/${id}`);
         setTopic(response.data);
         setLoading(false);
       } catch (err) {

@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { User, LogOut, Video as VideoIcon, Activity, Target, BrainCircuit, Mic2, Star, Flame } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const Profile = () => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
@@ -15,7 +17,7 @@ const Profile = () => {
     const fetchMyVideos = async () => {
       if (!user?.token) return;
       try {
-        const response = await axios.get('http://localhost:5000/api/videos/my-videos', {
+        const response = await axios.get(`${API_BASE_URL}/api/videos/my-videos`, {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         setVideos(response.data);
