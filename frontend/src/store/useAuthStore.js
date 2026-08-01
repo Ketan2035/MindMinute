@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const API_URL = 'http://localhost:5000/api/auth';
 
@@ -20,10 +21,9 @@ const useAuthStore = create((set) => ({
       });
       localStorage.setItem('user', JSON.stringify(response.data));
     } catch (error) {
-      set({ 
-        error: error.response?.data?.message || 'Login failed', 
-        isLoading: false 
-      });
+      const msg = error.response?.data?.message || 'Login failed';
+      toast.error(msg);
+      set({ error: msg, isLoading: false });
     }
   },
 
@@ -38,10 +38,9 @@ const useAuthStore = create((set) => ({
       });
       localStorage.setItem('user', JSON.stringify(response.data));
     } catch (error) {
-      set({ 
-        error: error.response?.data?.message || 'Google Login failed', 
-        isLoading: false 
-      });
+      const msg = error.response?.data?.message || 'Google Login failed';
+      toast.error(msg);
+      set({ error: msg, isLoading: false });
     }
   },
 
@@ -56,16 +55,16 @@ const useAuthStore = create((set) => ({
       });
       localStorage.setItem('user', JSON.stringify(response.data));
     } catch (error) {
-      set({ 
-        error: error.response?.data?.message || 'Registration failed', 
-        isLoading: false 
-      });
+      const msg = error.response?.data?.message || 'Registration failed';
+      toast.error(msg);
+      set({ error: msg, isLoading: false });
     }
   },
 
   logout: () => {
     localStorage.removeItem('user');
     set({ user: null, isAuthenticated: false });
+    toast.success('Logged out successfully');
   },
 
   checkAuth: () => {

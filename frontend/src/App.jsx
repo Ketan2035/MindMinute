@@ -1,6 +1,7 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { Toaster } from 'react-hot-toast'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
@@ -26,6 +27,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900 font-sans flex flex-col">
+      <Toaster position="top-center" toastOptions={{ className: 'font-medium shadow-lg rounded-xl text-sm mt-16' }} />
       <Navbar />
       <div className="flex-grow flex flex-col">
         <Routes>

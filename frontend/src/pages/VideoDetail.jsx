@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Target, MessageSquareQuote, Heart, ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, Star } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import toast from 'react-hot-toast';
 
 const VideoDetail = () => {
   const { id } = useParams();
@@ -40,7 +41,7 @@ const VideoDetail = () => {
   const submitReview = async (e) => {
     e.preventDefault();
     if (!user) {
-      alert('Please log in to leave a review.');
+      toast.error('Please log in to leave a review.');
       return;
     }
     if (!reviewText.trim() || !video) return;
@@ -53,9 +54,10 @@ const VideoDetail = () => {
       );
       setVideo(res.data);
       setReviewText('');
+      toast.success('Review posted successfully!');
     } catch (err) {
       console.error('Failed to submit review', err);
-      alert('Failed to post review. Please try again.');
+      toast.error('Failed to post review. Please try again.');
     } finally {
       setSubmittingReview(false);
     }
@@ -63,7 +65,7 @@ const VideoDetail = () => {
 
   const handleStar = async () => {
     if (!user) {
-      alert('Please log in to star videos');
+      toast.error('Please log in to star videos');
       return;
     }
     

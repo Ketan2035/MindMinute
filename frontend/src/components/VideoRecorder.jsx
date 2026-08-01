@@ -3,6 +3,7 @@ import { Camera, CameraOff, Mic, Square, Upload, RefreshCw, Activity, Clock, Zap
 import axios from 'axios';
 import useAuthStore from '../store/useAuthStore';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 const MINIMUM_RECORDING_TIME = 10; // seconds
 const MAXIMUM_RECORDING_TIME = 60; // seconds
@@ -46,7 +47,7 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
       setRecordingState('ready');
     } catch (err) {
       console.error("Error accessing media devices:", err);
-      alert("Could not access microphone/camera. Please check your browser permissions.");
+      toast.error("Could not access microphone/camera. Please check your browser permissions.");
     }
   };
 
@@ -223,10 +224,11 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
       });
       
       await fetchProfile();
+      toast.success('Recording uploaded successfully!');
       onUploadSuccess(response.data);
     } catch (error) {
       console.error('Upload failed:', error);
-      alert('Failed to upload recording. Please try again.');
+      toast.error('Failed to upload recording. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -248,10 +250,11 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
       );
       
       await fetchProfile();
+      toast.success('Transcript submitted successfully!');
       onUploadSuccess(response.data);
     } catch (error) {
       console.error('Text submission failed:', error);
-      alert('Failed to submit transcript. Please try again.');
+      toast.error('Failed to submit transcript. Please try again.');
     } finally {
       setUploading(false);
     }

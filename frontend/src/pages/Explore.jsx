@@ -3,6 +3,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Globe2, Star, MessageSquareQuote, Target, Video, Mic, Share2, Heart } from 'lucide-react';
+import toast from 'react-hot-toast';
 import CustomVideoPlayer from '../components/CustomVideoPlayer';
 import useAuthStore from '../store/useAuthStore';
 
@@ -30,7 +31,7 @@ const Explore = () => {
   const handleStar = async (e, videoId) => {
     e.stopPropagation();
     if (!user) {
-      alert('Please log in to star videos');
+      toast.error('Please log in to star videos');
       return;
     }
 
@@ -64,9 +65,10 @@ const Explore = () => {
     } else {
       try {
         await navigator.clipboard.writeText(url);
-        alert('Link copied to clipboard!');
+        toast.success('Link copied to clipboard!');
       } catch (err) {
         console.error('Failed to copy text: ', err);
+        toast.error('Failed to copy link');
       }
     }
   };
