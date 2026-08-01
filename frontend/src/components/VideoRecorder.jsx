@@ -15,13 +15,9 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
   const [uploading, setUploading] = useState(false);
   
   const [timer, setTimer] = useState(0);
+  const [countdown, setCountdown] = useState(null);
   
-  // Auto-stop recording when maximum time is reached
-  useEffect(() => {
-    if (timer >= MAXIMUM_RECORDING_TIME && recordingState === 'recording') {
-      stopRecording();
-    }
-  }, [timer, recordingState]);
+
   
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -134,6 +130,11 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
     }
   }, []);
 
+  const handleStartClick = () => {
+    if (!stream) return;
+    setCountdown(5);
+  };
+
   const startRecording = () => {
     if (!stream) return;
     
@@ -175,11 +176,13 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
       setTimer(prev => prev + 1);
     }, 1000);
 
-    // Start speech recognition
+    // Start speech recognition if not already started during countdown
     setLiveTranscript('');
     setInterimTranscript('');
-    isRecordingRef.current = true;
-    startSpeechRecognition();
+    if (!isRecordingRef.current) {
+      isRecordingRef.current = true;
+      startSpeechRecognition();
+    }
   };
 
   const stopRecording = () => {
@@ -282,6 +285,32 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
   // Estimate speaking speed: words / (timer in minutes), min 1 min to avoid division by zero
   const speakingSpeed = timer > 10 ? Math.round((transcriptWords.length / (timer / 60))) : 0;
 
+  // Auto-stop recording when maximum time is reached
+  useEffect(() => {
+    if (timer >= MAXIMUM_RECORDING_TIME && recordingState === 'recording') {
+      stopRecording();
+    }
+  }, [timer, recordingState]);
+
+  // Countdown timer logic
+  useEffect(() => {
+    let countdownInterval;
+    if (countdown !== null && countdown > 0) {
+      // Warm up speech recognition slightly early so it doesn't miss the first word
+      if (countdown === 2 && !transcriptActive) {
+        isRecordingRef.current = true;
+        startSpeechRecognition();
+      }
+      countdownInterval = setInterval(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
+    } else if (countdown === 0) {
+      setCountdown(null);
+      startRecording();
+    }
+    return () => clearInterval(countdownInterval);
+  }, [countdown, transcriptActive]);
+
   return (
     <div className="flex-1 flex p-6 lg:p-12 items-center justify-center bg-gray-50 min-h-0 pt-16 lg:pt-12">
       <div className="w-full max-w-7xl h-full flex flex-col lg:flex-row gap-6 lg:gap-8 min-h-0">
@@ -346,16 +375,32 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
 
               {/* Media Feed */}
               {useCamera ? (
-                <video 
-                  ref={videoRef} 
-                  autoPlay 
-                  muted 
-                  playsInline 
-                  className="flex-1 w-full h-full object-cover min-h-0"
-                />
+                <div className="flex-1 relative min-h-0">
+                  <video 
+                    ref={videoRef} 
+                    autoPlay 
+                    muted 
+                    playsInline 
+                    className={`w-full h-full object-cover min-h-0 transition-all duration-700 ${countdown !== null ? 'blur-sm scale-105 brightness-50' : ''}`}
+                  />
+                  {countdown !== null && (
+                    <div className="absolute inset-0 flex items-center justify-center z-20">
+                      <motion.div
+                        key={countdown}
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 1.5 }}
+                        transition={{ duration: 0.5 }}
+                        className="text-white text-8xl font-black drop-shadow-[0_0_30px_rgba(255,255,255,0.4)]"
+                      >
+                        {countdown}
+                      </motion.div>
+                    </div>
+                  )}
+                </div>
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center min-h-0">
-                  <div className="w-32 h-32 bg-indigo-600 rounded-full flex items-center justify-center relative shadow-lg">
+                <div className="flex-1 flex flex-col items-center justify-center min-h-0 relative">
+                  <div className={`w-32 h-32 bg-indigo-600 rounded-full flex items-center justify-center relative shadow-lg transition-all duration-700 ${countdown !== null ? 'opacity-30 blur-sm scale-90' : ''}`}>
                     {recordingState === 'recording' && (
                       <div className="absolute inset-0 bg-indigo-500 rounded-full animate-ping opacity-40"></div>
                     )}
@@ -365,6 +410,21 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
                     <p className="mt-8 text-indigo-200 font-medium animate-pulse text-sm">
                       Recording in progress...
                     </p>
+                  )}
+                  {countdown !== null && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
+                      <motion.div
+                        key={countdown}
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 1.5 }}
+                        transition={{ duration: 0.5 }}
+                        className="text-indigo-400 text-8xl font-black drop-shadow-2xl"
+                      >
+                        {countdown}
+                      </motion.div>
+                      <p className="text-indigo-300 font-medium mt-4">Get ready to speak</p>
+                    </div>
                   )}
                 </div>
               )}
@@ -391,11 +451,12 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
               <div className="bg-white p-4 border-t border-gray-200 flex items-center justify-center gap-4 shrink-0">
                 {recordingState === 'ready' ? (
                   <button 
-                    onClick={startRecording}
-                    className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-6 py-2.5 rounded-full font-semibold transition-colors text-sm shadow-sm"
+                    onClick={handleStartClick}
+                    disabled={countdown !== null}
+                    className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 text-white px-6 py-2.5 rounded-full font-semibold transition-colors text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                    Start Recording
+                    {countdown !== null ? 'Starting...' : 'Start Recording'}
                   </button>
                 ) : (
                   <div className="flex items-center gap-4 w-full justify-center">

@@ -47,6 +47,30 @@ const Explore = () => {
     }
   };
 
+  const handleShare = async (e, videoId, topicTitle) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/video/${videoId}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'MindMinute',
+          text: `Check out this 60-second speech on "${topicTitle || 'this topic'}"!`,
+          url: url,
+        });
+      } catch (err) {
+        console.log('Share canceled or failed', err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        alert('Link copied to clipboard!');
+      } catch (err) {
+        console.error('Failed to copy text: ', err);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-gray-50">
@@ -172,7 +196,7 @@ const Explore = () => {
                         </div>
                         <button
                           className="text-gray-400 hover:text-gray-600 transition-colors"
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => handleShare(e, video._id, video.topic?.title)}
                         >
                           <Share2 size={18} />
                         </button>
