@@ -1,4 +1,5 @@
 import Topic from '../models/Topic.js';
+import Video from '../models/Video.js';
 import { generateTopicIdea } from '../services/aiService.js';
 
 // @desc    Get all topics
@@ -52,8 +53,29 @@ export const createTopic = async (req, res) => {
 // @access  Public
 export const generateRandomTopic = async (req, res) => {
   try {
-    // Pick a random topic from the database
-    const randomTopics = await Topic.aggregate([{ $sample: { size: 1 } }]);
+    let targetDifficulty = 'Beginner';
+
+    if (req.user) {
+      const videoCount = await Video.countDocuments({ user: req.user._id });
+      const streak = req.user.streak || 0;
+
+      if (videoCount >= 30 && streak >= 7) {
+        targetDifficulty = 'Advanced';
+      } else if (videoCount >= 10 && streak >= 3) {
+        targetDifficulty = 'Intermediate';
+      }
+    }
+
+    // Pick a random topic matching the difficulty
+    let randomTopics = await Topic.aggregate([
+      { $match: { difficulty: targetDifficulty } },
+      { $sample: { size: 1 } }
+    ]);
+    
+    // Fallback if no topic of that difficulty exists
+    if (randomTopics.length === 0) {
+      randomTopics = await Topic.aggregate([{ $sample: { size: 1 } }]);
+    }
     
     if (randomTopics.length > 0) {
       return res.json(randomTopics[0]);

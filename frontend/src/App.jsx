@@ -13,6 +13,7 @@ import Analyze from './pages/Result'
 import Profile from './pages/Profile'
 import Leaderboard from './pages/Leaderboard'
 import Notifications from './pages/Notifications'
+import Settings from './pages/Settings'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import useAuthStore from './store/useAuthStore'
@@ -41,6 +42,7 @@ function App() {
           <Route path="/analyze/:id" element={<Analyze />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
         </Routes>
       </div>

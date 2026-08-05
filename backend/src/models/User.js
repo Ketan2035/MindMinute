@@ -22,6 +22,29 @@ const userSchema = new mongoose.Schema({
   googleId: {
     type: String,
   },
+  bio: {
+    type: String,
+    default: '',
+    maxLength: 300,
+  },
+  jobTitle: {
+    type: String,
+    default: '',
+    maxLength: 100,
+  },
+  location: {
+    type: String,
+    default: '',
+    maxLength: 100,
+  },
+  linkedin: {
+    type: String,
+    default: '',
+  },
+  twitter: {
+    type: String,
+    default: '',
+  },
   xp: {
     type: Number,
     default: 0,

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Mic, Sparkles, LineChart, RefreshCw, Target, Clock, Loader2, BrainCircuit } from 'lucide-react';
 import axios from 'axios';
+import useAuthStore from '../store/useAuthStore';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -10,6 +11,7 @@ const DUMMY_CATEGORIES = ['General', 'Business', 'Technology', 'Debate', 'Interv
 
 const Home = () => {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedTopic, setGeneratedTopic] = useState(null);
   const [animatingCategory, setAnimatingCategory] = useState('');
@@ -30,7 +32,10 @@ const Home = () => {
     }, 100);
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/topics/generate`);
+      const config = {
+        headers: user?.token ? { Authorization: `Bearer ${user.token}` } : {}
+      };
+      const response = await axios.post(`${API_BASE_URL}/api/topics/generate`, {}, config);
 
       setTimeout(() => {
         clearInterval(interval);
@@ -244,9 +249,20 @@ const Home = () => {
                 <Target size={28} />
               </div>
 
-              <span className="inline-block px-3 py-1 bg-gray-50 text-gray-500 text-[10px] font-bold uppercase tracking-widest rounded-full mb-3 border border-gray-200">
-                New Topic Generated
-              </span>
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <span className="inline-block px-3 py-1 bg-gray-50 text-gray-500 text-[10px] font-bold uppercase tracking-widest rounded-full border border-gray-200">
+                  New Topic Generated
+                </span>
+                {generatedTopic.difficulty && (
+                  <span className={`inline-block px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full border ${
+                    generatedTopic.difficulty === 'Beginner' ? 'bg-green-50 text-green-600 border-green-200' :
+                    generatedTopic.difficulty === 'Intermediate' ? 'bg-yellow-50 text-yellow-600 border-yellow-200' :
+                    'bg-red-50 text-red-600 border-red-200'
+                  }`}>
+                    {generatedTopic.difficulty}
+                  </span>
+                )}
+              </div>
 
               <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-8 leading-snug px-2">
                 {generatedTopic.title}

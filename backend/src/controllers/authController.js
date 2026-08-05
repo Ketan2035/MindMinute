@@ -123,6 +123,11 @@ export const getUserProfile = async (req, res) => {
       name: user.name,
       email: user.email,
       avatar: user.avatar,
+      bio: user.bio,
+      jobTitle: user.jobTitle,
+      location: user.location,
+      linkedin: user.linkedin,
+      twitter: user.twitter,
       xp: user.xp,
       streak: user.streak,
     });
@@ -145,6 +150,11 @@ export const updateUserProfile = async (req, res) => {
     if (req.body.name) user.name = req.body.name;
     if (req.body.avatar !== undefined) user.avatar = req.body.avatar;
     if (req.body.password) user.password = req.body.password;
+    if (req.body.bio !== undefined) user.bio = req.body.bio;
+    if (req.body.jobTitle !== undefined) user.jobTitle = req.body.jobTitle;
+    if (req.body.location !== undefined) user.location = req.body.location;
+    if (req.body.linkedin !== undefined) user.linkedin = req.body.linkedin;
+    if (req.body.twitter !== undefined) user.twitter = req.body.twitter;
 
     const updatedUser = await user.save();
 
@@ -153,6 +163,11 @@ export const updateUserProfile = async (req, res) => {
       name: updatedUser.name,
       email: updatedUser.email,
       avatar: updatedUser.avatar,
+      bio: updatedUser.bio,
+      jobTitle: updatedUser.jobTitle,
+      location: updatedUser.location,
+      linkedin: updatedUser.linkedin,
+      twitter: updatedUser.twitter,
       xp: updatedUser.xp,
       streak: updatedUser.streak,
       token: generateToken(updatedUser._id),
