@@ -1,35 +1,45 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { User, LogOut, Video as VideoIcon, Activity, Target, BrainCircuit, Mic2, Star, Flame, Edit2, MapPin, Briefcase, Link, AtSign } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Profile = () => {
-  const { user, logout, fetchProfile } = useAuthStore();
+  const { user: currentUser, logout } = useAuthStore();
   const navigate = useNavigate();
+  const { id } = useParams();
+  
+  const [profileUser, setProfileUser] = useState(null);
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const isOwner = currentUser?._id === id;
+
   useEffect(() => {
-    const fetchMyVideos = async () => {
-      if (!user?.token) return;
+    const fetchProfileData = async () => {
+      setLoading(true);
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/videos/my-videos`, {
-          headers: { Authorization: `Bearer ${user.token}` }
-        });
-        setVideos(response.data);
+        // Fetch public profile info
+        const userRes = await axios.get(`${API_BASE_URL}/api/auth/users/${id}`);
+        setProfileUser(userRes.data);
+
+        // Fetch user's public videos
+        const videoRes = await axios.get(`${API_BASE_URL}/api/videos/user/${id}`);
+        setVideos(videoRes.data);
       } catch (err) {
-        console.error('Failed to fetch videos', err);
+        console.error('Failed to fetch profile', err);
       } finally {
         setLoading(false);
       }
     };
     
-    fetchMyVideos();
-  }, [user]);
+    if (id) {
+      fetchProfileData();
+    }
+  }, [id]);
 
   if (loading) {
     return (
@@ -60,39 +70,20 @@ const Profile = () => {
 
   const totalMinutes = Math.round((totalVideos * 60) / 60); // assuming each is ~60 seconds
 
-  // --- Real Streak System Calculation ---
-  let currentStreak = 0;
-  let maxStreak = 0;
+  // Use real data or fallback
+  let maxStreak = profileUser?.maxStreak || 0;
+  let currentStreak = profileUser?.streak || 0;
+  const rank = profileUser?.xp > 1000 ? 'Expert' : profileUser?.xp > 500 ? 'Advanced' : profileUser?.xp > 100 ? 'Intermediate' : 'Beginner';
   
+  // Helper to format date in local timezone as YYYY-MM-DD
+  const getLocalDateString = (d) => {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  };
+
   if (videos.length > 0) {
-    // Get unique dates sorted descending
-    const dates = [...new Set(videos.map(v => new Date(v.createdAt).toISOString().split('T')[0]))].sort().reverse();
+    // Get unique dates sorted descending using local timezone
+    const dates = [...new Set(videos.map(v => getLocalDateString(new Date(v.createdAt))))].sort().reverse();
     
-    // Calculate current streak
-    let tempStreak = 0;
-    let expectedDate = new Date();
-    const checkDateString = (dateObj) => dateObj.toISOString().split('T')[0];
-    
-    // Is there a video today?
-    if (dates.includes(checkDateString(expectedDate))) {
-      tempStreak++;
-      expectedDate.setDate(expectedDate.getDate() - 1);
-    } else {
-      // Allow a gap of 1 day if they haven't posted today yet.
-      expectedDate.setDate(expectedDate.getDate() - 1);
-      if (dates.includes(checkDateString(expectedDate))) {
-        tempStreak++;
-        expectedDate.setDate(expectedDate.getDate() - 1);
-      }
-    }
-    
-    if (tempStreak > 0) {
-      while (dates.includes(checkDateString(expectedDate))) {
-        tempStreak++;
-        expectedDate.setDate(expectedDate.getDate() - 1);
-      }
-      currentStreak = tempStreak;
-    }
 
     // Calculate max streak
     let currentRun = 1;
@@ -109,6 +100,7 @@ const Profile = () => {
         currentRun = 1;
       }
     }
+    if (currentStreak > maxStreak) maxStreak = currentStreak;
   }
 
   // Heatmap calculation (last 26 weeks / 182 days)
@@ -124,7 +116,7 @@ const Profile = () => {
   const activityMap = {};
   videos.forEach(v => {
     const d = new Date(v.createdAt);
-    const dateString = d.toISOString().split('T')[0];
+    const dateString = getLocalDateString(d);
     activityMap[dateString] = (activityMap[dateString] || 0) + 1;
   });
 
@@ -136,7 +128,7 @@ const Profile = () => {
     currentDate.setDate(startDate.getDate() + i);
     
     const isFuture = currentDate > today;
-    const dateString = currentDate.toISOString().split('T')[0];
+    const dateString = getLocalDateString(currentDate);
     const count = isFuture ? 0 : (activityMap[dateString] || 0);
     
     let bgClass = "bg-slate-100";
@@ -181,62 +173,67 @@ const Profile = () => {
             
             {/* User Identity Card */}
             <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center text-center relative overflow-hidden">
-              <button 
-                onClick={() => navigate('/settings')}
-                className="absolute top-4 right-4 text-gray-400 hover:text-indigo-600 transition-colors p-2 bg-gray-50 hover:bg-indigo-50 rounded-full"
-                title="Edit Profile"
-              >
-                <Edit2 size={16} />
-              </button>
+              {isOwner && (
+                <button 
+                  onClick={() => navigate('/settings')}
+                  className="absolute top-4 right-4 text-gray-400 hover:text-indigo-600 transition-colors p-2 bg-gray-50 hover:bg-indigo-50 rounded-full"
+                  title="Edit Profile"
+                >
+                  <Edit2 size={16} />
+                </button>
+              )}
 
               <div className="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center text-4xl font-bold text-indigo-700 shadow-sm border-2 border-white ring-2 ring-gray-100 mb-4 mt-2 overflow-hidden">
-                {user?.avatar ? (
-                  <img src={user.avatar} alt={user?.name} className="w-full h-full object-cover" />
+                {profileUser?.avatar ? (
+                  <img src={profileUser.avatar} alt={profileUser?.name} className="w-full h-full object-cover" />
                 ) : (
-                  (user?.name || 'A')[0].toUpperCase()
+                  (profileUser?.name || 'A')[0].toUpperCase()
                 )}
               </div>
               
-              <h1 className="text-xl font-bold text-gray-900 mb-1">{user?.name || 'User Profile'}</h1>
-              {user?.jobTitle && <p className="text-sm font-semibold text-indigo-600 flex items-center justify-center mb-1"><Briefcase size={14} className="mr-1"/> {user.jobTitle}</p>}
-              <p className="text-gray-500 text-sm mb-4">{user?.email}</p>
+              <h1 className="text-xl font-bold text-gray-900 mb-1">{profileUser?.name || 'User Profile'}</h1>
+              {profileUser?.jobTitle && <p className="text-sm font-semibold text-indigo-600 flex items-center justify-center mb-1"><Briefcase size={14} className="mr-1"/> {profileUser.jobTitle}</p>}
               
-              {user?.location && (
-                <div className="flex items-center text-xs text-gray-500 font-semibold mb-4 bg-gray-50 px-3 py-1.5 rounded-full">
-                  <MapPin size={12} className="mr-1 text-gray-400" /> {user.location}
+              {isOwner && <p className="text-gray-500 text-sm mb-4">{profileUser?.email}</p>}
+              
+              {profileUser?.location && (
+                <div className="flex items-center text-xs text-gray-500 font-semibold mb-4 bg-gray-50 px-3 py-1.5 rounded-full mt-2">
+                  <MapPin size={12} className="mr-1 text-gray-400" /> {profileUser.location}
                 </div>
               )}
 
-              {user?.bio && (
-                <div className="text-sm text-gray-600 mb-6 bg-slate-50 border border-slate-100 p-3 rounded-xl italic w-full">
-                  "{user.bio}"
+              {profileUser?.bio && (
+                <div className="text-sm text-gray-600 mb-6 bg-slate-50 border border-slate-100 p-3 rounded-xl italic w-full mt-2">
+                  "{profileUser.bio}"
                 </div>
               )}
               
               <div className="flex gap-2 justify-center w-full mb-6">
-                <span className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold uppercase tracking-wider w-full">Rank: Member</span>
+                <span className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold uppercase tracking-wider w-full">Rank: {rank}</span>
               </div>
               
               <div className="flex gap-3 justify-center w-full mb-6">
-                {user?.linkedin && (
-                  <a href={user.linkedin} target="_blank" rel="noopener noreferrer" className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors">
+                {profileUser?.linkedin && (
+                  <a href={profileUser.linkedin} target="_blank" rel="noopener noreferrer" className="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors">
                     <Link size={18} />
                   </a>
                 )}
-                {user?.twitter && (
-                  <a href={user.twitter} target="_blank" rel="noopener noreferrer" className="p-2 bg-sky-50 text-sky-500 hover:bg-sky-100 rounded-lg transition-colors">
+                {profileUser?.twitter && (
+                  <a href={profileUser.twitter} target="_blank" rel="noopener noreferrer" className="p-2 bg-sky-50 text-sky-500 hover:bg-sky-100 rounded-lg transition-colors">
                     <AtSign size={18} />
                   </a>
                 )}
               </div>
               
-              <button 
-                onClick={handleLogout}
-                className="flex items-center justify-center w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition-colors mt-auto"
-              >
-                <LogOut size={16} className="mr-2" />
-                Sign Out
-              </button>
+              {isOwner && (
+                <button 
+                  onClick={handleLogout}
+                  className="flex items-center justify-center w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition-colors mt-auto"
+                >
+                  <LogOut size={16} className="mr-2" />
+                  Sign Out
+                </button>
+              )}
             </div>
 
             {/* Skill Breakdown (Like LeetCode Topics/Tags) */}
@@ -415,10 +412,16 @@ const Profile = () => {
 
               {videos.length === 0 ? (
                 <div className="p-8 border border-dashed border-gray-200 rounded-xl text-center">
-                  <p className="text-gray-500 text-sm mb-4">You haven't recorded any speeches yet.</p>
-                  <button onClick={() => navigate('/explore')} className="bg-indigo-600 hover:bg-indigo-700 transition-colors text-white px-5 py-2 text-sm rounded-lg font-bold">
-                    Start Practicing
-                  </button>
+                  {isOwner ? (
+                    <>
+                      <p className="text-gray-500 text-sm mb-4">You haven't recorded any speeches yet.</p>
+                      <button onClick={() => navigate('/explore')} className="bg-indigo-600 hover:bg-indigo-700 transition-colors text-white px-5 py-2 text-sm rounded-lg font-bold">
+                        Start Practicing
+                      </button>
+                    </>
+                  ) : (
+                    <p className="text-gray-500 text-sm mb-4">{profileUser?.name?.split(' ')[0] || 'This user'} hasn't published any speeches yet.</p>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -428,7 +431,7 @@ const Profile = () => {
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.05 }}
-                      onClick={() => navigate(`/analyze/${video._id}`)}
+                      onClick={() => navigate(isOwner ? `/analyze/${video._id}` : `/video/${video._id}`)}
                       className="bg-gray-50 p-3 rounded-xl border border-gray-100 hover:bg-indigo-50 hover:border-indigo-200 transition-all cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 group"
                     >
                       <div className="flex items-center gap-3">
@@ -456,7 +459,26 @@ const Profile = () => {
                           <Star size={12} className="text-amber-500 mr-1" fill="currentColor" />
                           <span className="font-bold text-gray-700 text-xs">{video.stars?.length || 0}</span>
                         </div>
-                        <span className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors ml-2">Review →</span>
+                        {isOwner ? (
+                          <div className="flex items-center gap-3 ml-2">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/video/${video._id}`);
+                              }}
+                              className="text-[11px] font-bold text-gray-500 hover:text-gray-900 transition-colors border border-gray-200 px-2 py-1 rounded-md bg-white hover:bg-gray-50"
+                            >
+                              Watch Video
+                            </button>
+                            <span className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
+                              Review AI →
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors ml-2">
+                            Watch Video →
+                          </span>
+                        )}
                       </div>
                     </motion.div>
                   ))}

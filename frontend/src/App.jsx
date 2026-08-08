@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Toaster } from 'react-hot-toast'
@@ -19,7 +19,7 @@ import Footer from './components/Footer'
 import useAuthStore from './store/useAuthStore'
 
 function App() {
-  const { checkAuth } = useAuthStore();
+  const { checkAuth, user } = useAuthStore();
   const location = useLocation();
 
   useEffect(() => {
@@ -41,7 +41,8 @@ function App() {
           <Route path="/video/:id" element={<VideoDetail />} />
           <Route path="/analyze/:id" element={<Analyze />} />
           <Route path="/notifications" element={<Notifications />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/user/:id" element={<Profile />} />
+          <Route path="/profile" element={<Navigate to={user ? `/user/${user._id}` : '/login'} replace />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
         </Routes>

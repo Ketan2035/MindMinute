@@ -1,5 +1,5 @@
 import express from 'express';
-import { uploadVideo, submitTextOnly, getMyVideos, getCommunityVideos, getExploreFeed, addReview, toggleStar, getVideoById } from '../controllers/videoController.js';
+import { uploadVideo, submitTextOnly, getMyVideos, getCommunityVideos, getExploreFeed, addReview, toggleStar, getVideoById, getUserVideos } from '../controllers/videoController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import { upload } from '../middlewares/uploadMiddleware.js';
 
@@ -13,6 +13,9 @@ router.route('/text-only')
 
 router.route('/my-videos')
   .get(protect, getMyVideos);
+
+router.route('/user/:userId')
+  .get(getUserVideos);
 
 router.route('/topic/:topicId/community')
   .get(protect, getCommunityVideos);

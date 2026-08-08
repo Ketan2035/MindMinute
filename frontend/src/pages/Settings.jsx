@@ -133,7 +133,7 @@ const Settings = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <button 
-              onClick={() => navigate('/profile')}
+              onClick={() => navigate(`/user/${user?._id}`)}
               className="flex items-center text-sm font-semibold text-gray-500 hover:text-indigo-600 transition-colors mb-2 group"
             >
               <ArrowLeft size={16} className="mr-1 group-hover:-translate-x-1 transition-transform" /> Back to Profile

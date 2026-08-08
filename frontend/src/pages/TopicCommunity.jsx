@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Users, Play, BrainCircuit, MessageSquare, Star } from 'lucide-react';
@@ -157,17 +157,17 @@ const TopicCommunity = () => {
 
                 {/* Content Section */}
                 <div className="p-6 flex-1 flex flex-col">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center font-bold text-indigo-700 border border-indigo-200">
+                  <Link to={`/user/${video.user?._id}`} className="flex items-center gap-3 mb-4 hover:opacity-80 transition-opacity w-fit">
+                    <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center font-bold text-indigo-700 border border-indigo-200 shrink-0">
                       {(video.user?.name || 'A')[0].toUpperCase()}
                     </div>
                     <div>
-                      <h4 className="font-bold text-gray-900">{video.user?.name || 'Anonymous User'}</h4>
+                      <h4 className="font-bold text-gray-900 hover:underline">{video.user?.name || 'Anonymous User'}</h4>
                       <p className="text-xs text-gray-500">
                         {new Date(video.createdAt).toLocaleDateString()}
                       </p>
                     </div>
-                  </div>
+                  </Link>
 
                   {/* Core Argument Snippet */}
                   {video.analysis?.thoughtAnalysis?.userCoreArgument && (
@@ -224,19 +224,21 @@ const TopicCommunity = () => {
             {/* Right: Analysis */}
             <div className="md:w-1/2 bg-gray-50 p-6 sm:p-8 flex flex-col overflow-y-auto max-h-[80vh]">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center font-bold text-indigo-700 text-xl border border-indigo-200 shrink-0">
-                  {(activeVideo.user?.name || 'A')[0].toUpperCase()}
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">{activeVideo.user?.name || 'Anonymous User'}</h3>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="text-sm font-semibold text-gray-500">
-                      Overall Score: <span className="text-indigo-600 font-bold">{activeVideo.analysis?.overallScore || 0}</span>
-                    </span>
-                    <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                    <span className="text-sm text-gray-500">{new Date(activeVideo.createdAt).toLocaleDateString()}</span>
+                <Link to={`/user/${activeVideo.user?._id}`} className="flex items-center gap-4 hover:opacity-80 transition-opacity">
+                  <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center font-bold text-indigo-700 text-xl border border-indigo-200 shrink-0">
+                    {(activeVideo.user?.name || 'A')[0].toUpperCase()}
                   </div>
-                </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 hover:underline">{activeVideo.user?.name || 'Anonymous User'}</h3>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-sm font-semibold text-gray-500">
+                        Overall Score: <span className="text-indigo-600 font-bold">{activeVideo.analysis?.overallScore || 0}</span>
+                      </span>
+                      <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                      <span className="text-sm text-gray-500">{new Date(activeVideo.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </Link>
               </div>
 
               <div className="space-y-6">

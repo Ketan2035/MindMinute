@@ -80,17 +80,19 @@ export const getUserProfile = async (req, res) => {
     const completedVideos = await Video.find({ user: user._id, status: 'completed' }).select('analysis');
     const totalXP = completedVideos.reduce((acc, v) => acc + (v.analysis?.overallScore || 0), 0);
 
-    // --- Calculate streak from session dates ---
+    // --- Calculate streak from session dates using local timezone ---
+    const getLocalDateStr = (dateObj) => dateObj.toLocaleString('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' });
+    
     const allVideos = await Video.find({ user: user._id }).select('createdAt');
     const dates = [
-      ...new Set(allVideos.map(v => new Date(v.createdAt).toISOString().split('T')[0]))
+      ...new Set(allVideos.map(v => getLocalDateStr(new Date(v.createdAt))))
     ].sort().reverse();
 
     let streak = 0;
     if (dates.length > 0) {
       let tempStreak = 0;
       let expectedDate = new Date();
-      const toDateStr = (d) => d.toISOString().split('T')[0];
+      const toDateStr = (d) => getLocalDateStr(d);
 
       if (dates.includes(toDateStr(expectedDate))) {
         tempStreak++;
@@ -131,6 +133,64 @@ export const getUserProfile = async (req, res) => {
       xp: user.xp,
       streak: user.streak,
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get public user profile by ID
+// @route   GET /api/auth/users/:id
+// @access  Public
+export const getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password -email');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Recalculate XP and streak like in getUserProfile
+    const videos = await Video.find({ user: user._id, status: 'completed' });
+    const totalXP = videos.reduce((acc, curr) => acc + (curr.analysis?.overallScore || 0), 0);
+    
+    // Quick streak calc
+    const getLocalDateStr = (dateObj) => dateObj.toLocaleString('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' });
+    const today = new Date();
+    const toDateStr = d => getLocalDateStr(d);
+    
+    const dates = [...new Set(videos.map(v => getLocalDateStr(new Date(v.createdAt))))].sort((a, b) => new Date(b) - new Date(a));
+
+    let streak = 0;
+    if (dates.length > 0) {
+      let tempStreak = 0;
+      let expectedDate = new Date(today);
+      
+      if (dates.includes(toDateStr(expectedDate))) {
+        tempStreak++;
+        expectedDate.setDate(expectedDate.getDate() - 1);
+      } else {
+        expectedDate.setDate(expectedDate.getDate() - 1);
+        if (dates.includes(toDateStr(expectedDate))) {
+          tempStreak++;
+          expectedDate.setDate(expectedDate.getDate() - 1);
+        }
+      }
+
+      if (tempStreak > 0) {
+        while (dates.includes(toDateStr(expectedDate))) {
+          tempStreak++;
+          expectedDate.setDate(expectedDate.getDate() - 1);
+        }
+        streak = tempStreak;
+      }
+    }
+
+    // Persist if changed
+    let changed = false;
+    if (user.xp !== totalXP) { user.xp = totalXP; changed = true; }
+    if (user.streak !== streak) { user.streak = streak; changed = true; }
+    if (changed) await user.save();
+
+    res.json(user);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

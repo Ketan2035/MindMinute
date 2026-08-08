@@ -86,7 +86,7 @@ const Navbar = () => {
                   )}
                 </Link>
 
-                <Link to="/profile" className="flex items-center gap-2 hover:bg-gray-50 px-2 py-1 rounded-lg transition-colors">
+                <Link to={`/user/${user._id}`} className="flex items-center gap-2 hover:bg-gray-50 px-2 py-1 rounded-lg transition-colors">
                   {user?.avatar ? (
                     <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full border border-gray-200 object-cover" />
                   ) : (

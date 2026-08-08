@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { Target, MessageSquareQuote, Heart, ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, Star } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
@@ -256,7 +256,7 @@ const VideoDetail = () => {
           
         {/* Header: User Info */}
         <div className="flex justify-between items-start mb-8 shrink-0">
-          <div className="flex items-center gap-4">
+          <Link to={`/user/${video.user?._id}`} className="flex items-center gap-4 hover:opacity-80 transition-opacity">
             {video.user?.avatar ? (
               <img src={video.user.avatar} alt={video.user.name} className="w-14 h-14 rounded-full object-cover border-2 border-slate-100 shadow-sm" />
             ) : (
@@ -265,10 +265,10 @@ const VideoDetail = () => {
               </div>
             )}
             <div>
-              <h3 className="font-bold text-slate-900 text-lg">{video.user?.name || 'Anonymous Speaker'}</h3>
+              <h3 className="font-bold text-slate-900 text-lg hover:underline">{video.user?.name || 'Anonymous Speaker'}</h3>
               <p className="text-sm text-slate-500 font-medium">{new Date(video.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</p>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Topic Info */}
@@ -335,16 +335,18 @@ const VideoDetail = () => {
           ) : (
             video.reviews?.map((review, i) => (
               <div key={i} className="flex gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                {review.user?.avatar ? (
-                  <img src={review.user.avatar} className="w-10 h-10 rounded-full object-cover shrink-0" alt={review.user.name} />
-                ) : (
-                  <div className="w-10 h-10 bg-indigo-50 text-indigo-600 font-bold text-sm rounded-full flex items-center justify-center shrink-0">
-                    {review.user?.name?.[0]?.toUpperCase() || 'A'}
-                  </div>
-                )}
+                <Link to={`/user/${review.user?._id}`} className="hover:opacity-80 transition-opacity">
+                  {review.user?.avatar ? (
+                    <img src={review.user.avatar} className="w-10 h-10 rounded-full object-cover shrink-0" alt={review.user.name} />
+                  ) : (
+                    <div className="w-10 h-10 bg-indigo-50 text-indigo-600 font-bold text-sm rounded-full flex items-center justify-center shrink-0">
+                      {review.user?.name?.[0]?.toUpperCase() || 'A'}
+                    </div>
+                  )}
+                </Link>
                 <div>
                   <div className="flex items-baseline gap-2 mb-1">
-                    <span className="font-bold text-slate-900 text-sm">{review.user?.name || 'User'}</span>
+                    <Link to={`/user/${review.user?._id}`} className="font-bold text-slate-900 text-sm hover:underline">{review.user?.name || 'User'}</Link>
                     <span className="text-[10px] text-slate-400 font-medium">
                       {new Date(review.createdAt).toLocaleDateString()}
                     </span>

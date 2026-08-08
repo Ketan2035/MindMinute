@@ -144,6 +144,22 @@ export const getMyVideos = async (req, res) => {
   }
 };
 
+// @desc    Get user's public videos by ID
+// @route   GET /api/videos/user/:userId
+// @access  Public
+export const getUserVideos = async (req, res) => {
+  try {
+    const videos = await Video.find({ user: req.params.userId, status: 'completed' })
+      .populate('topic', 'title category')
+      .populate('user', 'name avatar')
+      .sort({ createdAt: -1 });
+
+    res.json(videos);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // @desc    Get community videos for a topic
 // @route   GET /api/videos/topic/:topicId/community
 // @access  Private

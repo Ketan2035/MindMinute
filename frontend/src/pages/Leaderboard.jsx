@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 import { Trophy, Medal, Flame, Star, TrendingUp, Sparkles } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -80,20 +81,20 @@ const Leaderboard = () => {
                       {rankDisplay}
                     </td>
                     <td className="py-4 px-6">
-                      <div className="flex items-center gap-4">
+                      <Link to={`/user/${u._id}`} className="flex items-center gap-4 hover:opacity-80 transition-opacity">
                         {u.avatar ? (
-                          <img src={u.avatar} alt={u.name} className="w-10 h-10 rounded-full border border-slate-200 object-cover" />
+                          <img src={u.avatar} alt={u.name} className="w-10 h-10 rounded-full border border-slate-200 object-cover shrink-0" />
                         ) : (
-                          <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center border border-indigo-200 text-indigo-700 font-bold">
+                          <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center border border-indigo-200 text-indigo-700 font-bold shrink-0">
                             {u.name[0].toUpperCase()}
                           </div>
                         )}
                         <div>
-                          <p className={`font-semibold ${isCurrentUser ? 'text-indigo-700' : 'text-slate-900'}`}>
+                          <p className={`font-semibold hover:underline ${isCurrentUser ? 'text-indigo-700' : 'text-slate-900'}`}>
                             {u.name} {isCurrentUser && '(You)'}
                           </p>
                         </div>
-                      </div>
+                      </Link>
                     </td>
                     <td className="py-4 px-6 text-center">
                       <div className="inline-flex items-center justify-center gap-1.5 px-3 py-1 bg-orange-50 border border-orange-100 rounded-full">

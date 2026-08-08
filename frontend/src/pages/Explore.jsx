@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Globe2, Star, MessageSquareQuote, Target, Video, Mic, Share2, Heart } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CustomVideoPlayer from '../components/CustomVideoPlayer';
@@ -166,19 +166,19 @@ const Explore = () => {
                     <div className="p-6 flex flex-col flex-1">
 
                       {/* User Info */}
-                      <div className="flex items-center gap-3 mb-5">
+                      <Link to={`/user/${video.user?._id}`} className="flex items-center gap-3 mb-5 hover:opacity-80 transition-opacity">
                         {video.user?.avatar ? (
-                          <img src={video.user.avatar} alt={video.user.name} className="w-10 h-10 rounded-full object-cover border border-gray-200 shadow-sm" />
+                          <img src={video.user.avatar} alt={video.user.name} className="w-10 h-10 rounded-full object-cover border border-gray-200 shadow-sm shrink-0" />
                         ) : (
-                          <div className="w-10 h-10 bg-gradient-to-br from-indigo-100 to-indigo-50 text-indigo-700 font-bold rounded-full flex items-center justify-center border border-indigo-200 shadow-sm">
+                          <div className="w-10 h-10 bg-gradient-to-br from-indigo-100 to-indigo-50 text-indigo-700 font-bold rounded-full flex items-center justify-center border border-indigo-200 shadow-sm shrink-0">
                             {video.user?.name?.[0]?.toUpperCase() || 'A'}
                           </div>
                         )}
                         <div>
-                          <h3 className="font-bold text-gray-900 text-sm leading-tight">{video.user?.name || 'Anonymous Speaker'}</h3>
+                          <h3 className="font-bold text-gray-900 text-sm leading-tight hover:underline">{video.user?.name || 'Anonymous Speaker'}</h3>
                           <p className="text-xs text-gray-500 font-medium">{new Date(video.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                         </div>
-                      </div>
+                      </Link>
 
                       {/* Social Actions Bar */}
                       <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
@@ -229,14 +229,16 @@ const Explore = () => {
                     >
                       {/* Podcast Left: Media/Avatar */}
                       <div className="md:w-64 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-100 p-6 flex flex-col items-center justify-center text-center">
-                        {video.user?.avatar ? (
-                          <img src={video.user.avatar} alt={video.user.name} className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-sm mb-3" />
-                        ) : (
-                          <div className="w-20 h-20 bg-gradient-to-br from-indigo-100 to-indigo-50 text-indigo-700 text-2xl font-bold rounded-full flex items-center justify-center border-4 border-white shadow-sm mb-3">
-                            {video.user?.name?.[0]?.toUpperCase() || 'A'}
-                          </div>
-                        )}
-                        <h3 className="font-bold text-gray-900 text-sm mb-1">{video.user?.name || 'Anonymous Speaker'}</h3>
+                        <Link to={`/user/${video.user?._id}`} className="flex flex-col items-center hover:opacity-80 transition-opacity">
+                          {video.user?.avatar ? (
+                            <img src={video.user.avatar} alt={video.user.name} className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-sm mb-3 shrink-0" />
+                          ) : (
+                            <div className="w-20 h-20 bg-gradient-to-br from-indigo-100 to-indigo-50 text-indigo-700 text-2xl font-bold rounded-full flex items-center justify-center border-4 border-white shadow-sm mb-3 shrink-0">
+                              {video.user?.name?.[0]?.toUpperCase() || 'A'}
+                            </div>
+                          )}
+                          <h3 className="font-bold text-gray-900 text-sm mb-1 hover:underline">{video.user?.name || 'Anonymous Speaker'}</h3>
+                        </Link>
                         <div className="flex items-center gap-1 text-xs text-gray-500 font-medium">
                           <span>{new Date(video.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                         </div>
