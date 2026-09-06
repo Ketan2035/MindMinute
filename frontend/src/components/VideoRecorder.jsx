@@ -331,7 +331,7 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Set up your studio</h2>
               <p className="text-gray-500 mb-8 max-w-sm mx-auto text-sm">
-                Your speech will be transcribed in real-time and analysed by Gemini AI.
+                Your speech will be transcribed in real-time and analysed by AI.
               </p>
               <div className="flex gap-4">
                 <button 
@@ -626,7 +626,7 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
               </div>
               {recordingState === 'recorded' && liveTranscript && (
                 <p className="text-[10px] text-gray-400 mt-2">
-                  ✓ This transcript will be sent to Gemini AI for deep analysis.
+                  ✓ This transcript will be sent for AI deep analysis.
                 </p>
               )}
             </div>

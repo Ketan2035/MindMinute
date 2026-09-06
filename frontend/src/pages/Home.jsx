@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Mic, Sparkles, LineChart, RefreshCw, Target, Clock, Loader2, BrainCircuit } from 'lucide-react';
+import { ArrowRight, Mic, Zap, Cpu, Activity, LineChart, RefreshCw, Target, Clock, Loader2, BrainCircuit } from 'lucide-react';
 import axios from 'axios';
 import useAuthStore from '../store/useAuthStore';
 
@@ -97,7 +97,7 @@ const Home = () => {
                     onClick={generateTopic}
                     className="w-full sm:w-auto px-6 py-3.5 bg-gray-900 hover:bg-gray-800 text-white font-bold text-sm rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 group hover:-translate-y-0.5"
                   >
-                    <Sparkles size={18} className="text-gray-400 group-hover:text-white transition-colors" />
+                    <Zap size={18} className="text-gray-400 group-hover:text-white transition-colors" />
                     Generate Topic
                   </button>
                   <Link
@@ -196,7 +196,7 @@ const Home = () => {
                 <div className="flex flex-col items-center w-full max-w-[260px]">
                   <div className="flex items-center justify-between w-full text-[10px] font-bold uppercase tracking-widest text-indigo-500 mb-2 px-2">
                     <span>Target Node</span>
-                    <Sparkles size={14} className="animate-pulse" />
+                    <Activity size={14} className="animate-pulse" />
                   </div>
                   <div className="w-full bg-gray-50 border border-gray-200/80 rounded-2xl h-14 relative overflow-hidden flex items-center justify-center shadow-inner">
                     <AnimatePresence mode="popLayout">
@@ -310,11 +310,11 @@ const Home = () => {
 
           <div>
             <div className="w-10 h-10 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center mb-4">
-              <Sparkles size={20} className="text-gray-700" />
+              <Cpu size={20} className="text-gray-700" />
             </div>
             <h3 className="text-base font-semibold text-gray-900 mb-2">Deep Analysis</h3>
             <p className="text-sm text-gray-500 leading-relaxed">
-              Gemini instantly transcribes and grades your speech, highlighting logical flaws and grammar mistakes.
+              AI instantly transcribes and grades your speech, highlighting logical flaws and grammar mistakes.
             </p>
           </div>
 

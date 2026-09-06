@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import { Trophy, Medal, Flame, Star, TrendingUp, Sparkles } from 'lucide-react';
+import { Trophy, Medal, Flame, Star, TrendingUp } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 import useAuthStore from '../store/useAuthStore';

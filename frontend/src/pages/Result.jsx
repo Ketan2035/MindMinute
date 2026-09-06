@@ -70,8 +70,8 @@ const Analyze = () => {
         </h2>
         <p className="text-gray-500 text-center max-w-md">
           {isCompletedNoAnalysis 
-            ? 'No transcript was captured during your recording, so Gemini could not analyse your speech. Please try again and make sure your microphone is working.' 
-            : 'The AI analysis failed. This can happen due to API limits. Please try again.'}
+            ? 'No transcript was captured during your recording, so the AI could not analyse your speech. Please try again and make sure your microphone is working.' 
+            : 'The AI analysis failed. This can happen due to network or server limits. Please try again.'}
         </p>
         <button
           onClick={() => navigate('/')}
@@ -90,11 +90,11 @@ const Analyze = () => {
           <div className="absolute inset-0 rounded-full border-4 border-indigo-100"></div>
           <div className="absolute inset-0 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin"></div>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-3xl">🤖</span>
+            <span className="text-3xl">🎙️</span>
           </div>
         </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Analyzing your speech...</h2>
-        <p className="text-gray-500 animate-pulse text-lg">Gemini 1.5 Flash is generating your transcript and deep analysis.</p>
+        <p className="text-gray-500 animate-pulse text-lg">AI is generating your transcript and deep analysis.</p>
         <p className="text-gray-400 mt-2 text-sm">(This usually takes 15-30 seconds)</p>
       </div>
     );
