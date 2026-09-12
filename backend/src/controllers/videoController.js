@@ -3,7 +3,7 @@ import Topic from '../models/Topic.js';
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import { uploadVideoToCloudinary } from '../services/cloudinaryService.js';
-import { analyzeVideoWithGemini, analyzeTextWithGemini } from '../services/geminiService.js';
+import { analyzeVideoWithGemini, analyzeTextWithGemini, generateProRewriteOnly } from '../services/geminiService.js';
 
 // @desc    Upload a video
 // @route   POST /api/videos
@@ -424,5 +424,40 @@ export const getVideoById = async (req, res) => {
   } catch (error) {
     console.error('Failed to get video by ID:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Generate or fetch Pro Speaker Rewrite for a video
+// @route   POST /api/videos/:id/pro-rewrite
+// @access  Private
+export const generateVideoProRewrite = async (req, res) => {
+  try {
+    const video = await Video.findById(req.params.id).populate('topic', 'title category');
+    if (!video) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+
+    if (!video.transcript) {
+      return res.status(400).json({ message: 'Video transcript is required to generate a Pro Rewrite' });
+    }
+
+    // If proRewrite already exists and no force refresh requested, return existing
+    if (video.analysis?.proRewrite?.speechText && !req.body.forceRefresh) {
+      return res.json(video.analysis.proRewrite);
+    }
+
+    const proRewriteData = await generateProRewriteOnly(video.transcript, video.topic);
+    
+    if (!video.analysis) {
+      video.analysis = {};
+    }
+    video.analysis.proRewrite = proRewriteData;
+    video.markModified('analysis');
+    await video.save();
+
+    res.json(proRewriteData);
+  } catch (error) {
+    console.error('Failed to generate Pro Rewrite:', error);
+    res.status(500).json({ message: error.message || 'Failed to generate Pro Rewrite' });
   }
 };

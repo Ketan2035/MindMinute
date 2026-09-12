@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Camera, CameraOff, Mic, Square, Upload, RefreshCw, Activity, Clock, Zap, Target, FileText, CheckCircle2, AlertCircle, Globe, Lock, Sparkles } from 'lucide-react';
+import { Camera, CameraOff, Mic, Square, Upload, RefreshCw, Activity, Clock, Zap, Target, FileText, CheckCircle2, AlertCircle, Globe, Lock, Mic2 } from 'lucide-react';
 import axios from 'axios';
 import useAuthStore from '../store/useAuthStore';
 import { motion } from 'framer-motion';
@@ -29,6 +29,8 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
   const timerRef = useRef(null);
   const recognitionRef = useRef(null);
   const isRecordingRef = useRef(false); // track recording state for speech restart
+  const accumulatedFinalRef = useRef(''); // accumulated final transcript across restarts
+  const sessionFinalRef = useRef(''); // final transcript for current recognition session
 
   const [liveTranscript, setLiveTranscript] = useState('');
   const [interimTranscript, setInterimTranscript] = useState('');
@@ -36,8 +38,9 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
   
   const { user, fetchProfile } = useAuthStore();
 
-  // Derived real stats from live transcript
-  const wordCount = liveTranscript.trim() ? liveTranscript.trim().split(/\s+/).length : 0;
+  // Derived real stats from full live transcript (final + interim)
+  const fullLiveText = (liveTranscript + ' ' + interimTranscript).trim();
+  const wordCount = fullLiveText ? fullLiveText.split(/\s+/).filter(Boolean).length : 0;
 
   const handlePermissions = async (withCamera) => {
     setUseCamera(withCamera);
@@ -72,9 +75,16 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
       return;
     }
 
-    // Stop any existing instance first
+    // Abort & cleanup any existing instance first
     if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch(_) {}
+      try {
+        recognitionRef.current.onstart = null;
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.abort();
+      } catch (_) {}
+      recognitionRef.current = null;
     }
 
     try {
@@ -84,51 +94,67 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
       recognition.lang = 'en-US';
       recognition.maxAlternatives = 1;
 
+      sessionFinalRef.current = '';
+
+      recognition.onstart = () => {
+        setTranscriptActive(true);
+      };
+
       recognition.onresult = (event) => {
-        let newFinalTranscript = '';
-        let newInterimTranscript = '';
-        
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            newFinalTranscript += event.results[i][0].transcript + ' ';
+        let currentSessionFinal = '';
+        let currentInterim = '';
+
+        for (let i = 0; i < event.results.length; i++) {
+          const result = event.results[i];
+          const text = result[0]?.transcript || '';
+          if (result.isFinal) {
+            currentSessionFinal += text + ' ';
           } else {
-            newInterimTranscript += event.results[i][0].transcript + ' ';
+            currentInterim += text + ' ';
           }
         }
-        
-        if (newFinalTranscript) {
-          setLiveTranscript(prev => prev + newFinalTranscript);
-        }
-        setInterimTranscript(newInterimTranscript);
+
+        sessionFinalRef.current = currentSessionFinal;
+
+        const combinedFinal = (accumulatedFinalRef.current + ' ' + currentSessionFinal).trim();
+        setLiveTranscript(combinedFinal);
+        setInterimTranscript(currentInterim.trim());
       };
 
       recognition.onerror = (e) => {
         console.warn('Speech recognition warning:', e.error);
-        // On mobile or unsupported speech capture, don't spam restarts on non-recoverable errors
-        if (isRecordingRef.current && e.error !== 'aborted' && e.error !== 'not-allowed' && e.error !== 'audio-capture') {
-          setTimeout(() => {
-            if (isRecordingRef.current) startSpeechRecognition();
-          }, 600);
+        if (e.error === 'no-speech') {
+          // Normal pause in speech; onend will automatically restart
+          return;
         }
-      };
-
-      recognition.onend = () => {
-        setTranscriptActive(false);
-        // Auto-restart if still actively recording
-        if (isRecordingRef.current) {
+        if (isRecordingRef.current && e.error !== 'aborted' && e.error !== 'not-allowed' && e.error !== 'service-not-allowed') {
           setTimeout(() => {
             if (isRecordingRef.current) startSpeechRecognition();
           }, 300);
         }
       };
 
-      recognition.onstart = () => {
-        setTranscriptActive(true);
+      recognition.onend = () => {
+        // Commit this session's final speech to the accumulated buffer
+        if (sessionFinalRef.current) {
+          accumulatedFinalRef.current = (accumulatedFinalRef.current + ' ' + sessionFinalRef.current).trim();
+          sessionFinalRef.current = '';
+        }
+        setTranscriptActive(false);
+
+        // Auto-restart if still actively recording
+        if (isRecordingRef.current) {
+          setTimeout(() => {
+            if (isRecordingRef.current) {
+              startSpeechRecognition();
+            }
+          }, 100);
+        }
       };
 
       recognitionRef.current = recognition;
       recognition.start();
-    } catch(e) {
+    } catch (e) {
       console.warn('Could not start speech recognition:', e);
     }
   }, []);
@@ -162,16 +188,20 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
       setVideoBlob(blob);
       setRecordingState('recorded');
       stopMediaTracks();
+
       // Stop speech recognition
       isRecordingRef.current = false;
       if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch(_) {}
+        try {
+          recognitionRef.current.stop();
+        } catch (_) {}
       }
       setTranscriptActive(false);
     };
 
     mediaRecorderRef.current = mediaRecorder;
-    mediaRecorder.start();
+    // Request time-sliced chunks every 500ms
+    mediaRecorder.start(500);
     setRecordingState('recording');
     
     setTimer(0);
@@ -179,18 +209,25 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
       setTimer(prev => prev + 1);
     }, 1000);
 
-    // Start speech recognition if not already started during countdown
+    // Reset transcript buffers and initiate live recognition
+    accumulatedFinalRef.current = '';
+    sessionFinalRef.current = '';
     setLiveTranscript('');
     setInterimTranscript('');
-    if (!isRecordingRef.current) {
-      isRecordingRef.current = true;
-      startSpeechRecognition();
-    }
+    isRecordingRef.current = true;
+    startSpeechRecognition();
   };
 
   const stopRecording = () => {
     if (timer < MINIMUM_RECORDING_TIME) return; 
     
+    isRecordingRef.current = false;
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (_) {}
+    }
+
     if (mediaRecorderRef.current && recordingState === 'recording') {
       mediaRecorderRef.current.stop();
       clearInterval(timerRef.current);
@@ -199,11 +236,16 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
 
   const resetRecording = () => {
     setVideoBlob(null);
+    accumulatedFinalRef.current = '';
+    sessionFinalRef.current = '';
     setLiveTranscript('');
     setInterimTranscript('');
     setTimer(0);
     setTranscriptActive(false);
     isRecordingRef.current = false;
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (_) {}
+    }
     setRecordingState('permissions');
   };
 
@@ -302,11 +344,6 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
   useEffect(() => {
     let countdownInterval;
     if (countdown !== null && countdown > 0) {
-      // Warm up speech recognition slightly early so it doesn't miss the first word
-      if (countdown === 2 && !transcriptActive) {
-        isRecordingRef.current = true;
-        startSpeechRecognition();
-      }
       countdownInterval = setInterval(() => {
         setCountdown((prev) => prev - 1);
       }, 1000);
@@ -315,7 +352,7 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
       startRecording();
     }
     return () => clearInterval(countdownInterval);
-  }, [countdown, transcriptActive]);
+  }, [countdown]);
 
   return (
     <div className="flex-1 flex p-6 lg:p-12 items-center justify-center bg-gray-50 min-h-0 pt-16 lg:pt-12">
@@ -503,7 +540,7 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
                   {liveTranscript.trim() ? (
                     <><CheckCircle2 size={12} /> {wordCount} words captured</>
                   ) : (
-                    <><Sparkles size={12} className="text-indigo-300" /> AI Audio Transcriber Ready</>
+                    <><Mic2 size={12} className="text-indigo-300" /> AI Audio Transcriber Ready</>
                   )}
                 </div>
               </div>
@@ -654,7 +691,7 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
                     className="w-full flex-1 min-h-[100px] p-3 text-sm text-gray-800 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none font-normal leading-relaxed"
                   />
                   <p className="text-[11px] text-gray-500 flex items-center gap-1">
-                    <Sparkles size={12} className="text-indigo-500 shrink-0" />
+                    <Mic2 size={12} className="text-indigo-500 shrink-0" />
                     {liveTranscript.trim() 
                       ? 'Transcript ready for AI evaluation.' 
                       : 'AI will transcribe directly from your recorded audio.'}

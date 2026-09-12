@@ -71,16 +71,33 @@ const ANALYSIS_SCHEMA = `{
   "thoughtAnalysis": {
     "userCoreArgument": "Summary of main argument",
     "missingCounterargument": "What perspective was missed"
+  },
+  "proRewrite": {
+    "title": "Inspiring Title for the Speech",
+    "speechText": "A 45-60 second polished TED-style version of the speaker's core message using elevated vocabulary and persuasive rhetorical framing.",
+    "keyUpgrades": [
+      { "technique": "Rhetorical Hook", "explanation": "Opened with a thought-provoking question instead of a generic intro." },
+      { "technique": "Elevated Vocabulary", "explanation": "Replaced everyday words with high-impact precision terms." },
+      { "technique": "Rule of Three", "explanation": "Structured key arguments into three balanced clauses for memorable impact." }
+    ],
+    "deliveryTips": [
+      "Pause for 2 full seconds after the opening hook to let it resonate.",
+      "Vary your vocal pitch when transitioning to the final takeaway."
+    ]
   }
 }`;
 
 // @desc  Analyze a video/audio buffer via Gemini multimodal
 export const analyzeVideoWithGemini = async (videoBuffer, topic, mimeType = 'video/webm') => {
-  const prompt = `You are an expert English speaking coach and critical thinking evaluator.
+  const prompt = `You are a world-class executive speaking coach, TED-talk speechwriter, and critical thinking evaluator.
 Analyze this speech recording. The speaker's topic is: "${topic.title}".
 
-Transcribe the speech and rigorously evaluate the speaker's performance.
-Return ONLY a valid JSON object — no markdown, no code fences, just raw JSON — using this schema as a template:
+1. Transcribe the speech accurately.
+2. Rigorously score grammar, fluency, and critical thinking (0-100).
+3. Identify strengths, areas for improvement, and filler words.
+4. Craft a "Pro Speaker Rewrite" (TED-talk / Executive style) delivering the speaker's exact core thesis in 45-60 seconds with captivating rhetoric, punchy vocabulary, and delivery tips.
+
+Return ONLY a valid JSON object — no markdown, no code fences, just raw JSON — matching this schema:
 ${ANALYSIS_SCHEMA}`;
 
   try {
@@ -104,14 +121,17 @@ ${ANALYSIS_SCHEMA}`;
 
 // @desc  Analyze a text transcript via Gemini
 export const analyzeTextWithGemini = async (transcriptText, topic) => {
-  const prompt = `You are an expert English speaking coach and critical thinking evaluator.
+  const prompt = `You are a world-class executive speaking coach, TED-talk speechwriter, and critical thinking evaluator.
 The speaker's topic is: "${topic.title}".
 
 Their transcript:
 "${transcriptText}"
 
-Evaluate their speech based on this text only. Base the fluency score on sentence structure, flow, and coherence.
-Return ONLY a valid JSON object — no markdown, no code fences, just raw JSON — using this schema as a template (substitute the actual transcript and real scores/feedback):
+1. Rigorously evaluate their speech based on this text. Base fluency on sentence structure, flow, and coherence.
+2. Provide precise feedback on grammar, fluency, critical thinking, and filler words.
+3. Craft a "Pro Speaker Rewrite" (TED-talk / Executive style) delivering the speaker's exact core thesis in 45-60 seconds with captivating rhetoric, elevated vocabulary, and vocal delivery tips.
+
+Return ONLY a valid JSON object — no markdown, no code fences, just raw JSON — matching this schema:
 ${ANALYSIS_SCHEMA}`;
 
   try {
@@ -124,6 +144,41 @@ ${ANALYSIS_SCHEMA}`;
     return parseGeminiJSON(rawText);
   } catch (error) {
     console.error('Gemini Text Analysis Error:', error?.message?.slice(0, 200) || error);
+    throw error;
+  }
+};
+
+// @desc  Generate a Pro Speaker Rewrite on-demand for existing transcript
+export const generateProRewriteOnly = async (transcriptText, topic) => {
+  const schema = `{
+    "title": "Title of the speech",
+    "speechText": "A 45-60 second refined TED-style delivery of the user's argument...",
+    "keyUpgrades": [
+      { "technique": "Technique Name", "explanation": "Why this upgrade improves the delivery" }
+    ],
+    "deliveryTips": [
+      "Vocal tip 1",
+      "Vocal tip 2"
+    ]
+  }`;
+
+  const prompt = `You are a world-class executive speechwriter and TED-talk coach.
+The topic is: "${topic.title}".
+The user's original speech transcript is:
+"${transcriptText}"
+
+Reframe and rewrite the user's core message as a powerful, inspiring, 45-60 second TED-style delivery.
+Include key rhetorical upgrades applied and 2-3 specific vocal delivery tips.
+Return ONLY valid raw JSON matching this schema:
+${schema}`;
+
+  try {
+    const rawText = await generateWithFallback(() => ([
+      { parts: [{ text: prompt }] },
+    ]));
+    return parseGeminiJSON(rawText);
+  } catch (error) {
+    console.error('Gemini Pro Rewrite Error:', error?.message?.slice(0, 200) || error);
     throw error;
   }
 };

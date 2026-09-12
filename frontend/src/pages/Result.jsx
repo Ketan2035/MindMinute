@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Flame, Star, Clock, Trophy, Play, MessageSquare, ThumbsUp, Eye, CheckCircle2, AlertCircle, BrainCircuit, Globe, Lock } from 'lucide-react';
+import { Flame, Star, Clock, Trophy, Play, MessageSquare, ThumbsUp, Eye, CheckCircle2, AlertCircle, BrainCircuit, Globe, Lock, ArrowRight } from 'lucide-react';
 import axios from 'axios';
 import useAuthStore from '../store/useAuthStore';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import ProSpeakerStudio from '../components/ProSpeakerStudio';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -329,6 +330,42 @@ const Analyze = () => {
                   </div>
                 </div>
               )}
+
+              {/* Pro Speaker Studio (TED-Style AI Rewrite & Voice Audio) */}
+              <ProSpeakerStudio
+                proRewrite={analysis.proRewrite}
+                originalTranscript={latestVideo.transcript}
+                topicTitle={latestVideo.topic?.title}
+                videoId={latestVideo._id}
+                onProRewriteGenerated={(newProRewrite) => {
+                  setLatestVideo(prev => ({
+                    ...prev,
+                    analysis: {
+                      ...prev.analysis,
+                      proRewrite: newProRewrite
+                    }
+                  }));
+                }}
+              />
+
+              {/* Bottom CTAs */}
+              <div className="mt-8 pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <button
+                  onClick={() => navigate(`/video/${latestVideo._id}`)}
+                  className="w-full sm:w-auto px-6 py-3 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-bold text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Play size={16} />
+                  Watch Video & Community Feedback
+                </button>
+
+                <button
+                  onClick={() => navigate('/explore')}
+                  className="w-full sm:w-auto px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>Practice Another Topic</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
 
             </div>
           </motion.div>

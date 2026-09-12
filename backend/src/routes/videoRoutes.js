@@ -10,7 +10,8 @@ import {
   getVideoById, 
   getUserVideos,
   toggleVideoVisibility,
-  bulkToggleVisibility
+  bulkToggleVisibility,
+  generateVideoProRewrite
 } from '../controllers/videoController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import { upload } from '../middlewares/uploadMiddleware.js';
@@ -37,6 +38,9 @@ router.route('/explore')
 
 // Toggle visibility for all user videos (must come before /:id)
 router.patch('/visibility/all', protect, bulkToggleVisibility);
+
+// Generate / retrieve Pro Speaker Rewrite
+router.post('/:id/pro-rewrite', protect, generateVideoProRewrite);
 
 // Toggle or update video visibility (Public / Private)
 router.patch('/:id/visibility', protect, toggleVideoVisibility);

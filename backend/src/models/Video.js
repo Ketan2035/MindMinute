@@ -60,6 +60,17 @@ const videoSchema = new mongoose.Schema({
     thoughtAnalysis: {
       userCoreArgument: String,
       missingCounterargument: String
+    },
+    proRewrite: {
+      title: String,
+      speechText: String,
+      keyUpgrades: [
+        {
+          technique: String,
+          explanation: String
+        }
+      ],
+      deliveryTips: [String]
     }
   },
   status: {

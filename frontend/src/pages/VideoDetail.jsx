@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Target, MessageSquareQuote, Heart, ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, Star, Globe, Lock } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
+import ProSpeakerStudio from '../components/ProSpeakerStudio';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -366,6 +367,27 @@ const VideoDetail = () => {
             </p>
           </div>
         </div>
+
+        {/* Pro Speaker Studio (TED-Style AI Rewrite & Voice Audio) */}
+        {video.transcript && (
+          <div className="mb-8 shrink-0">
+            <ProSpeakerStudio
+              proRewrite={video.analysis?.proRewrite}
+              originalTranscript={video.transcript}
+              topicTitle={video.topic?.title}
+              videoId={video._id}
+              onProRewriteGenerated={(newProRewrite) => {
+                setVideo(prev => ({
+                  ...prev,
+                  analysis: {
+                    ...prev.analysis,
+                    proRewrite: newProRewrite
+                  }
+                }));
+              }}
+            />
+          </div>
+        )}
 
         {/* Community Reviews Section */}
         <div className="flex items-center justify-between mb-4 shrink-0">
