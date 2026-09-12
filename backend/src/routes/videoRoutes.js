@@ -1,5 +1,17 @@
 import express from 'express';
-import { uploadVideo, submitTextOnly, getMyVideos, getCommunityVideos, getExploreFeed, addReview, toggleStar, getVideoById, getUserVideos } from '../controllers/videoController.js';
+import { 
+  uploadVideo, 
+  submitTextOnly, 
+  getMyVideos, 
+  getCommunityVideos, 
+  getExploreFeed, 
+  addReview, 
+  toggleStar, 
+  getVideoById, 
+  getUserVideos,
+  toggleVideoVisibility,
+  bulkToggleVisibility
+} from '../controllers/videoController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import { upload } from '../middlewares/uploadMiddleware.js';
 
@@ -22,6 +34,12 @@ router.route('/topic/:topicId/community')
 
 router.route('/explore')
   .get(getExploreFeed);
+
+// Toggle visibility for all user videos (must come before /:id)
+router.patch('/visibility/all', protect, bulkToggleVisibility);
+
+// Toggle or update video visibility (Public / Private)
+router.patch('/:id/visibility', protect, toggleVideoVisibility);
 
 // Add a review to a video
 router.post('/:id/reviews', protect, addReview);

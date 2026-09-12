@@ -22,6 +22,11 @@ const videoSchema = new mongoose.Schema({
     enum: ['video', 'audio', 'text'],
     default: 'video'
   },
+  isPublic: {
+    type: Boolean,
+    default: true,
+    index: true,
+  },
   duration: {
     type: Number, // duration in seconds
   },

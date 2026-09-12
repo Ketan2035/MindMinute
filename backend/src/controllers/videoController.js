@@ -10,7 +10,7 @@ import { analyzeVideoWithGemini, analyzeTextWithGemini } from '../services/gemin
 // @access  Private
 export const uploadVideo = async (req, res) => {
   try {
-    const { topicId, transcript, mediaType } = req.body;
+    const { topicId, transcript, mediaType, isPublic } = req.body;
     
     if (!req.file) {
       return res.status(400).json({ message: 'No video file provided' });
@@ -23,6 +23,9 @@ export const uploadVideo = async (req, res) => {
     // Upload to Cloudinary
     const result = await uploadVideoToCloudinary(req.file.buffer);
 
+    // Parse isPublic flag (defaults to true)
+    const isVideoPublic = isPublic === false || isPublic === 'false' ? false : true;
+
     // Create Video record
     const video = new Video({
       user: req.user._id,
@@ -30,19 +33,36 @@ export const uploadVideo = async (req, res) => {
       videoUrl: result.secure_url,
       cloudinaryId: result.public_id,
       mediaType: mediaType || 'video',
+      isPublic: isVideoPublic,
       duration: result.duration || 0,
       status: 'processing', // Will be updated by AI service later
     });
 
     const createdVideo = await video.save();
 
-    // Trigger AI analysis asynchronously using the live transcript
+    // Trigger AI analysis asynchronously
     const topicData = await Topic.findById(topicId);
-    if (topicData && transcript) {
-      analyzeTextWithGemini(transcript, topicData)
-        .then(async (analysisData) => {
+    if (topicData) {
+      const hasValidTranscript = transcript && transcript.trim().length >= 10;
+      
+      const runAnalysis = async () => {
+        try {
+          let analysisData;
+          if (hasValidTranscript) {
+            console.log('Running AI text analysis with captured transcript...');
+            try {
+              analysisData = await analyzeTextWithGemini(transcript.trim(), topicData);
+            } catch (textErr) {
+              console.warn('Text analysis failed, falling back to direct video audio analysis:', textErr.message);
+              analysisData = await analyzeVideoWithGemini(req.file.buffer, topicData, req.file.mimetype || 'video/webm');
+            }
+          } else {
+            console.log('No client transcript captured (mobile/unsupported browser) — running AI audio/video transcription & analysis...');
+            analysisData = await analyzeVideoWithGemini(req.file.buffer, topicData, req.file.mimetype || 'video/webm');
+          }
+
           console.log('AI Analysis Complete for video:', createdVideo._id);
-          createdVideo.transcript = analysisData.transcript || transcript;
+          createdVideo.transcript = analysisData.transcript || transcript || 'Speech analyzed directly from recording.';
           createdVideo.analysis = analysisData;
           createdVideo.status = 'completed';
           await createdVideo.save();
@@ -53,14 +73,15 @@ export const uploadVideo = async (req, res) => {
             await User.findByIdAndUpdate(createdVideo.user, { $inc: { xp: xpEarned } });
             console.log(`Awarded ${xpEarned} XP to user ${createdVideo.user}`);
           }
-        })
-        .catch(async (err) => {
-          console.error('AI Analysis Failed:', err);
+        } catch (err) {
+          console.error('AI Analysis Failed completely:', err);
           createdVideo.status = 'failed';
           await createdVideo.save();
-        });
-    } else if (!transcript) {
-      console.log('No transcript provided, skipping AI text analysis');
+        }
+      };
+
+      runAnalysis();
+    } else {
       createdVideo.status = 'completed';
       await createdVideo.save();
     }
@@ -77,7 +98,7 @@ export const uploadVideo = async (req, res) => {
 // @access  Private
 export const submitTextOnly = async (req, res) => {
   try {
-    const { topicId, transcript } = req.body;
+    const { topicId, transcript, isPublic } = req.body;
     
     if (!transcript) {
       return res.status(400).json({ message: 'Transcript text is required' });
@@ -87,12 +108,15 @@ export const submitTextOnly = async (req, res) => {
       return res.status(400).json({ message: 'Topic ID is required' });
     }
 
+    const isVideoPublic = isPublic === false || isPublic === 'false' ? false : true;
+
     // Create Video record (as a text-only session)
     const video = new Video({
       user: req.user._id,
       topic: topicId,
       transcript: transcript, // store initial transcript immediately
       mediaType: 'text',
+      isPublic: isVideoPublic,
       duration: 0,
       status: 'processing',
     });
@@ -149,7 +173,11 @@ export const getMyVideos = async (req, res) => {
 // @access  Public
 export const getUserVideos = async (req, res) => {
   try {
-    const videos = await Video.find({ user: req.params.userId, status: 'completed' })
+    const videos = await Video.find({ 
+      user: req.params.userId, 
+      status: 'completed',
+      isPublic: { $ne: false }
+    })
       .populate('topic', 'title category')
       .populate('user', 'name avatar')
       .sort({ createdAt: -1 });
@@ -168,9 +196,10 @@ export const getCommunityVideos = async (req, res) => {
     const { topicId } = req.params;
     const videos = await Video.find({ 
       topic: topicId,
-      status: 'completed'
+      status: 'completed',
+      isPublic: { $ne: false }
     })
-      .populate('user', 'name')
+      .populate('user', 'name avatar')
       .sort({ 'analysis.overallScore': -1, createdAt: -1 }) // Sort by score, then newest
       .limit(20);
       
@@ -186,10 +215,10 @@ export const getCommunityVideos = async (req, res) => {
 export const getExploreFeed = async (req, res) => {
   try {
     // Include completed videos. Also include 'processing' ones older than 3 minutes
-    // (they are stuck — Gemini likely failed silently — but we still want to show them)
     const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
 
     const videos = await Video.find({
+      isPublic: { $ne: false },
       $or: [
         { status: 'completed' },
         { status: 'processing', createdAt: { $lt: threeMinutesAgo } },
@@ -205,6 +234,75 @@ export const getExploreFeed = async (req, res) => {
   } catch (error) {
     console.error('Failed to get explore feed:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// @desc    Toggle or set video privacy/visibility
+// @route   PATCH /api/videos/:id/visibility
+// @access  Private
+export const toggleVideoVisibility = async (req, res) => {
+  try {
+    const video = await Video.findById(req.params.id);
+    
+    if (!video) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+
+    // Verify ownership
+    if (video.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to change visibility of this video' });
+    }
+
+    if (req.body.isPublic !== undefined) {
+      video.isPublic = req.body.isPublic === true || req.body.isPublic === 'true';
+    } else {
+      video.isPublic = !video.isPublic;
+    }
+
+    await video.save();
+
+    const updatedVideo = await Video.findById(req.params.id)
+      .populate('user', 'name avatar')
+      .populate('topic', 'title category')
+      .populate('reviews.user', 'name avatar');
+
+    res.json(updatedVideo);
+  } catch (error) {
+    console.error('Failed to toggle video visibility:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Toggle or set visibility for ALL videos belonging to authenticated user
+// @route   PATCH /api/videos/visibility/all
+// @access  Private
+export const bulkToggleVisibility = async (req, res) => {
+  try {
+    const { isPublic } = req.body;
+    
+    let targetState;
+    if (isPublic !== undefined) {
+      targetState = isPublic === true || isPublic === 'true';
+    } else {
+      // If at least one video is public, toggle all to private; otherwise toggle all to public
+      const publicCount = await Video.countDocuments({ user: req.user._id, isPublic: { $ne: false } });
+      targetState = publicCount === 0;
+    }
+
+    await Video.updateMany(
+      { user: req.user._id },
+      { $set: { isPublic: targetState } }
+    );
+
+    const updatedVideos = await Video.find({ user: req.user._id })
+      .populate('user', 'name avatar')
+      .populate('topic', 'title category')
+      .sort({ createdAt: -1 });
+
+    res.json({ isPublic: targetState, videos: updatedVideos });
+  } catch (error) {
+    console.error('Failed to bulk toggle visibility:', error);
+    res.status(500).json({ message: error.message });
   }
 };
 

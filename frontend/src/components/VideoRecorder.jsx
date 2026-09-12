@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Camera, CameraOff, Mic, Square, Upload, RefreshCw, Activity, Clock, Zap, Target, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Camera, CameraOff, Mic, Square, Upload, RefreshCw, Activity, Clock, Zap, Target, FileText, CheckCircle2, AlertCircle, Globe, Lock, Sparkles } from 'lucide-react';
 import axios from 'axios';
 import useAuthStore from '../store/useAuthStore';
 import { motion } from 'framer-motion';
@@ -12,6 +12,7 @@ const MAXIMUM_RECORDING_TIME = 60; // seconds
 const VideoRecorder = ({ topic, onUploadSuccess }) => {
   const [recordingState, setRecordingState] = useState('permissions'); // permissions, ready, recording, recorded
   const [useCamera, setUseCamera] = useState(true);
+  const [isPublic, setIsPublic] = useState(true);
   
   const [videoBlob, setVideoBlob] = useState(null);
   const [stream, setStream] = useState(null);
@@ -63,11 +64,11 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
     }
   };
 
-  // --- Robust Speech Recognition ---
+  // --- Robust Cross-Platform Speech Recognition ---
   const startSpeechRecognition = useCallback(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      console.warn('Speech Recognition not supported in this browser.');
+      console.warn('Speech Recognition not supported in this browser. Backend Gemini audio transcriber will be used.');
       return;
     }
 
@@ -76,57 +77,56 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
       try { recognitionRef.current.stop(); } catch(_) {}
     }
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    recognition.maxAlternatives = 1;
-
-    recognition.onresult = (event) => {
-      let newFinalTranscript = '';
-      let newInterimTranscript = '';
-      
-      // event.resultIndex = index of the first NEW result since the last event
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          newFinalTranscript += event.results[i][0].transcript + ' ';
-        } else {
-          newInterimTranscript += event.results[i][0].transcript + ' ';
-        }
-      }
-      
-      if (newFinalTranscript) {
-        setLiveTranscript(prev => prev + newFinalTranscript);
-      }
-      setInterimTranscript(newInterimTranscript);
-    };
-
-    recognition.onerror = (e) => {
-      console.warn('Speech recognition error:', e.error);
-      // On network error or aborted, try to restart if still recording
-      if (isRecordingRef.current && e.error !== 'aborted') {
-        setTimeout(() => {
-          if (isRecordingRef.current) startSpeechRecognition();
-        }, 500);
-      }
-    };
-
-    recognition.onend = () => {
-      setTranscriptActive(false);
-      // Auto-restart if still recording (Chrome stops after ~60s of silence)
-      if (isRecordingRef.current) {
-        setTimeout(() => {
-          if (isRecordingRef.current) startSpeechRecognition();
-        }, 300);
-      }
-    };
-
-    recognition.onstart = () => {
-      setTranscriptActive(true);
-    };
-
-    recognitionRef.current = recognition;
     try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = (event) => {
+        let newFinalTranscript = '';
+        let newInterimTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            newFinalTranscript += event.results[i][0].transcript + ' ';
+          } else {
+            newInterimTranscript += event.results[i][0].transcript + ' ';
+          }
+        }
+        
+        if (newFinalTranscript) {
+          setLiveTranscript(prev => prev + newFinalTranscript);
+        }
+        setInterimTranscript(newInterimTranscript);
+      };
+
+      recognition.onerror = (e) => {
+        console.warn('Speech recognition warning:', e.error);
+        // On mobile or unsupported speech capture, don't spam restarts on non-recoverable errors
+        if (isRecordingRef.current && e.error !== 'aborted' && e.error !== 'not-allowed' && e.error !== 'audio-capture') {
+          setTimeout(() => {
+            if (isRecordingRef.current) startSpeechRecognition();
+          }, 600);
+        }
+      };
+
+      recognition.onend = () => {
+        setTranscriptActive(false);
+        // Auto-restart if still actively recording
+        if (isRecordingRef.current) {
+          setTimeout(() => {
+            if (isRecordingRef.current) startSpeechRecognition();
+          }, 300);
+        }
+      };
+
+      recognition.onstart = () => {
+        setTranscriptActive(true);
+      };
+
+      recognitionRef.current = recognition;
       recognition.start();
     } catch(e) {
       console.warn('Could not start speech recognition:', e);
@@ -216,6 +216,7 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
     formData.append('topicId', topic._id);
     formData.append('transcript', liveTranscript.trim()); // send the real transcript
     formData.append('mediaType', useCamera ? 'video' : 'audio');
+    formData.append('isPublic', isPublic);
 
     try {
       const response = await axios.post(`${API_BASE_URL}/api/videos`, formData, {
@@ -242,7 +243,7 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
     setUploading(true);
     try {
       const response = await axios.post(`${API_BASE_URL}/api/videos/text-only`, 
-        { topicId: topic._id, transcript: liveTranscript.trim() },
+        { topicId: topic._id, transcript: liveTranscript.trim(), isPublic },
         {
           headers: {
             'Content-Type': 'application/json',
@@ -494,11 +495,15 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
                   Review
                 </span>
                 {/* Transcript captured indicator */}
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${liveTranscript.trim() ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-red-500/20 text-red-300 border border-red-500/30'}`}>
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+                  liveTranscript.trim() 
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
+                    : 'bg-indigo-500/20 text-indigo-200 border border-indigo-500/30'
+                }`}>
                   {liveTranscript.trim() ? (
                     <><CheckCircle2 size={12} /> {wordCount} words captured</>
                   ) : (
-                    <><AlertCircle size={12} /> No transcript — AI analysis may be limited</>
+                    <><Sparkles size={12} className="text-indigo-300" /> AI Audio Transcriber Ready</>
                   )}
                 </div>
               </div>
@@ -521,7 +526,7 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
                 )}
               </div>
               
-              <div className="bg-white p-4 border-t border-gray-200 flex items-center justify-between shrink-0">
+              <div className="bg-white p-4 border-t border-gray-200 flex flex-wrap items-center justify-between gap-3 shrink-0">
                 <button 
                   onClick={resetRecording}
                   disabled={uploading}
@@ -529,23 +534,49 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
                 >
                   <RefreshCw size={16} /> Retake
                 </button>
-                <button 
-                  onClick={handleUpload}
-                  disabled={uploading}
-                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors disabled:opacity-70 text-sm shadow-sm"
-                >
-                  {uploading ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                      Uploading & Analysing...
-                    </>
-                  ) : (
-                    <>
-                      <Upload size={16} />
-                      Submit Session
-                    </>
-                  )}
-                </button>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsPublic(!isPublic)}
+                    title={isPublic ? "Public to community" : "Private (Only visible to you)"}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                      isPublic
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                        : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+                    }`}
+                  >
+                    {isPublic ? (
+                      <>
+                        <Globe size={14} className="text-emerald-600" />
+                        <span>Public Speech</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock size={14} className="text-slate-600" />
+                        <span>Hidden / Private</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button 
+                    onClick={handleUpload}
+                    disabled={uploading}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-semibold transition-colors disabled:opacity-70 text-sm shadow-sm"
+                  >
+                    {uploading ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                        Uploading & Analysing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={16} />
+                        Submit Session
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -593,7 +624,7 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
                   Transcript Status
                 </div>
                 <span className={`font-bold text-xs px-2 py-1 rounded-full ${transcriptActive ? 'bg-emerald-100 text-emerald-700' : recordingState === 'recording' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
-                  {transcriptActive ? '● Active' : recordingState === 'recording' ? '○ Reconnecting' : '— Idle'}
+                  {transcriptActive ? '● Active' : recordingState === 'recording' ? '○ Auto-Detecting' : '— Idle'}
                 </span>
               </div>
             </div>
@@ -613,21 +644,32 @@ const VideoRecorder = ({ topic, onUploadSuccess }) => {
                   </span>
                 )}
               </div>
-              <div className="flex-1 bg-gray-50 rounded-xl p-4 border border-gray-100 overflow-y-auto min-h-[80px]">
-                {liveTranscript || interimTranscript ? (
-                  <p className="text-gray-700 text-sm leading-relaxed">{liveTranscript} <span className="opacity-60">{interimTranscript}</span></p>
-                ) : (
-                  <p className="text-gray-400 text-sm italic">
-                    {recordingState === 'recording' 
-                      ? 'Start speaking — your words will appear here in real time...' 
-                      : 'No transcript captured.'}
+
+              {recordingState === 'recorded' ? (
+                <div className="flex-1 flex flex-col gap-2">
+                  <textarea
+                    value={liveTranscript}
+                    onChange={(e) => setLiveTranscript(e.target.value)}
+                    placeholder="Speech will be transcribed directly from audio by Gemini AI upon submission. You can also edit or type notes here..."
+                    className="w-full flex-1 min-h-[100px] p-3 text-sm text-gray-800 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none font-normal leading-relaxed"
+                  />
+                  <p className="text-[11px] text-gray-500 flex items-center gap-1">
+                    <Sparkles size={12} className="text-indigo-500 shrink-0" />
+                    {liveTranscript.trim() 
+                      ? 'Transcript ready for AI evaluation.' 
+                      : 'AI will transcribe directly from your recorded audio.'}
                   </p>
-                )}
-              </div>
-              {recordingState === 'recorded' && liveTranscript && (
-                <p className="text-[10px] text-gray-400 mt-2">
-                  ✓ This transcript will be sent for AI deep analysis.
-                </p>
+                </div>
+              ) : (
+                <div className="flex-1 bg-gray-50 rounded-xl p-4 border border-gray-100 overflow-y-auto min-h-[80px]">
+                  {liveTranscript || interimTranscript ? (
+                    <p className="text-gray-700 text-sm leading-relaxed">{liveTranscript} <span className="opacity-60">{interimTranscript}</span></p>
+                  ) : (
+                    <p className="text-gray-400 text-sm italic">
+                      Start speaking — your words will appear here in real time...
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}

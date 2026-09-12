@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Flame, Star, Clock, Trophy, Play, MessageSquare, ThumbsUp, Eye, CheckCircle2, AlertCircle, BrainCircuit } from 'lucide-react';
+import { Flame, Star, Clock, Trophy, Play, MessageSquare, ThumbsUp, Eye, CheckCircle2, AlertCircle, BrainCircuit, Globe, Lock } from 'lucide-react';
 import axios from 'axios';
 import useAuthStore from '../store/useAuthStore';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -27,6 +28,26 @@ const Analyze = () => {
       console.error('Failed to fetch videos', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleVisibility = async () => {
+    if (!latestVideo || !user) return;
+    try {
+      const res = await axios.patch(
+        `${API_BASE_URL}/api/videos/${latestVideo._id}/visibility`,
+        {},
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
+      setLatestVideo(prev => ({ ...prev, isPublic: res.data.isPublic }));
+      if (res.data.isPublic) {
+        toast.success('Speech is now Public (visible to community)!');
+      } else {
+        toast.success('Speech is now Hidden (Private to you)!');
+      }
+    } catch (err) {
+      console.error('Failed to toggle visibility:', err);
+      toast.error('Failed to update privacy settings');
     }
   };
 
@@ -148,6 +169,57 @@ const Analyze = () => {
             </div>
 
             <div className="p-6 md:p-8">
+              {/* Visibility Banner */}
+              <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-50 border border-slate-200 rounded-2xl mb-8">
+                <div className="flex items-center gap-3">
+                  {latestVideo.isPublic !== false ? (
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                      <Globe size={20} />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-slate-200 flex items-center justify-center text-slate-700 shrink-0">
+                      <Lock size={20} />
+                    </div>
+                  )}
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                      Speech Visibility: 
+                      <span className={`px-2 py-0.5 rounded text-xs font-extrabold ${
+                        latestVideo.isPublic !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-800'
+                      }`}>
+                        {latestVideo.isPublic !== false ? 'Public' : 'Hidden (Private)'}
+                      </span>
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {latestVideo.isPublic !== false 
+                        ? 'Visible to the community on Explore & Topic Community feeds.' 
+                        : 'Hidden from the community. Only you can access this speech.'}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleToggleVisibility}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-xs ${
+                    latestVideo.isPublic !== false
+                      ? 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'
+                  }`}
+                >
+                  {latestVideo.isPublic !== false ? (
+                    <>
+                      <Lock size={14} />
+                      <span>Hide from Community</span>
+                    </>
+                  ) : (
+                    <>
+                      <Globe size={14} />
+                      <span>Make Public</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
               {/* Transcript Section */}
               <div className="mb-8">
                 <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">

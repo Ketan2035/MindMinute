@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
-import { User, LogOut, Video as VideoIcon, Activity, Target, BrainCircuit, Mic2, Star, Flame, Edit2, MapPin, Briefcase, Link, AtSign } from 'lucide-react';
+import { User, LogOut, Video as VideoIcon, Activity, Target, BrainCircuit, Mic2, Star, Flame, Edit2, MapPin, Briefcase, Link, AtSign, Globe, Lock, Eye, EyeOff } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import toast from 'react-hot-toast';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -18,28 +19,77 @@ const Profile = () => {
 
   const isOwner = currentUser?._id === id;
 
-  useEffect(() => {
-    const fetchProfileData = async () => {
-      setLoading(true);
-      try {
-        // Fetch public profile info
-        const userRes = await axios.get(`${API_BASE_URL}/api/auth/users/${id}`);
-        setProfileUser(userRes.data);
+  const fetchProfileData = async () => {
+    setLoading(true);
+    try {
+      // Fetch public profile info
+      const userRes = await axios.get(`${API_BASE_URL}/api/auth/users/${id}`);
+      setProfileUser(userRes.data);
 
-        // Fetch user's public videos
+      // If owner, fetch all user videos (public + private). Otherwise fetch public only.
+      if (isOwner && currentUser?.token) {
+        const videoRes = await axios.get(`${API_BASE_URL}/api/videos/my-videos`, {
+          headers: { Authorization: `Bearer ${currentUser.token}` }
+        });
+        setVideos(videoRes.data);
+      } else {
         const videoRes = await axios.get(`${API_BASE_URL}/api/videos/user/${id}`);
         setVideos(videoRes.data);
-      } catch (err) {
-        console.error('Failed to fetch profile', err);
-      } finally {
-        setLoading(false);
       }
-    };
-    
+    } catch (err) {
+      console.error('Failed to fetch profile', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     if (id) {
       fetchProfileData();
     }
-  }, [id]);
+  }, [id, isOwner, currentUser?.token]);
+
+  const handleToggleVisibility = async (videoId, e) => {
+    if (e) e.stopPropagation();
+    try {
+      const res = await axios.patch(
+        `${API_BASE_URL}/api/videos/${videoId}/visibility`,
+        {},
+        { headers: { Authorization: `Bearer ${currentUser.token}` } }
+      );
+      setVideos(prev => prev.map(v => v._id === videoId ? { ...v, isPublic: res.data.isPublic } : v));
+      if (res.data.isPublic) {
+        toast.success('Speech is now Public and visible to community');
+      } else {
+        toast.success('Speech is now Hidden (Private to you)');
+      }
+    } catch (err) {
+      console.error('Failed to toggle visibility:', err);
+      toast.error('Failed to update privacy settings');
+    }
+  };
+
+  const allVideosVisible = videos.length > 0 && videos.some(v => v.isPublic !== false);
+
+  const handleToggleAllVisibility = async () => {
+    try {
+      const targetState = !allVideosVisible;
+      await axios.patch(
+        `${API_BASE_URL}/api/videos/visibility/all`,
+        { isPublic: targetState },
+        { headers: { Authorization: `Bearer ${currentUser.token}` } }
+      );
+      setVideos(prev => prev.map(v => ({ ...v, isPublic: targetState })));
+      if (targetState) {
+        toast.success('All videos are now Public & visible to community');
+      } else {
+        toast.success('All videos are now Hidden (Private to you)');
+      }
+    } catch (err) {
+      console.error('Failed to toggle all visibility:', err);
+      toast.error('Failed to update privacy settings');
+    }
+  };
 
   if (loading) {
     return (
@@ -403,12 +453,60 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Bottom Row: Video History (Recent Submissions equivalent) */}
+            {/* Bottom Row: Video History (Recent Speeches) */}
             <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-              <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center">
-                <Mic2 className="mr-2 text-gray-400" size={18} />
-                Recent Speeches
-              </h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-gray-900 flex items-center">
+                    <Mic2 className="mr-2 text-indigo-600" size={18} />
+                    Recent Speeches
+                  </h3>
+                  <span className="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full font-bold">
+                    {videos.length}
+                  </span>
+                </div>
+
+                {/* Single Master Toggle Button for All Videos */}
+                {isOwner && videos.length > 0 && (
+                  <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl shadow-xs">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                        {allVideosVisible ? (
+                          <span className="text-emerald-700 flex items-center gap-1 font-bold">
+                            <Globe size={13} className="text-emerald-600" />
+                            All Videos Visible
+                          </span>
+                        ) : (
+                          <span className="text-slate-600 flex items-center gap-1 font-bold">
+                            <Lock size={13} className="text-slate-500" />
+                            All Videos Hidden
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        {allVideosVisible ? 'Public to community' : 'Only visible to you'}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={allVideosVisible}
+                      onClick={handleToggleAllVisibility}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500/30 ${
+                        allVideosVisible ? 'bg-emerald-500' : 'bg-slate-300'
+                      }`}
+                      title={allVideosVisible ? "Click to hide all your videos from public" : "Click to make all your videos visible to public"}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                          allVideosVisible ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {videos.length === 0 ? (
                 <div className="p-8 border border-dashed border-gray-200 rounded-xl text-center">
@@ -432,11 +530,11 @@ const Profile = () => {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.05 }}
                       onClick={() => navigate(isOwner ? `/analyze/${video._id}` : `/video/${video._id}`)}
-                      className="bg-gray-50 p-3 rounded-xl border border-gray-100 hover:bg-indigo-50 hover:border-indigo-200 transition-all cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 group"
+                      className="bg-gray-50 p-3.5 rounded-xl border border-gray-100 hover:bg-indigo-50/50 hover:border-indigo-200 transition-all cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 group"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-8 bg-gray-900 rounded bg-cover bg-center overflow-hidden shrink-0 relative">
-                           {video.videoUrl.endsWith('.webm') && video.videoUrl.includes('audio') ? (
+                           {video.videoUrl?.endsWith('.webm') && video.videoUrl?.includes('audio') ? (
                              <div className="absolute inset-0 bg-indigo-900 flex items-center justify-center">
                                <Mic2 size={12} className="text-white/50" />
                              </div>
@@ -454,21 +552,67 @@ const Profile = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0">
+                      <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0">
+                        {/* Visibility Toggle Button for Owner */}
+                        {isOwner ? (
+                          <div 
+                            className="flex items-center gap-2 bg-white px-2.5 py-1.5 rounded-lg border border-gray-200 hover:border-gray-300 shadow-xs transition-all"
+                            onClick={(e) => e.stopPropagation()}
+                            title={video.isPublic !== false ? "Visible (Public to Community) - Click switch to hide" : "Hidden (Private to You) - Click switch to make visible"}
+                          >
+                            <span className="text-xs font-bold flex items-center gap-1 min-w-[58px]">
+                              {video.isPublic !== false ? (
+                                <span className="text-emerald-700 flex items-center gap-1">
+                                  <Globe size={13} className="text-emerald-600" />
+                                  Visible
+                                </span>
+                              ) : (
+                                <span className="text-slate-600 flex items-center gap-1">
+                                  <Lock size={13} className="text-slate-500" />
+                                  Hidden
+                                </span>
+                              )}
+                            </span>
+                            
+                            {/* Interactive Toggle Switch */}
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={video.isPublic !== false}
+                              onClick={(e) => handleToggleVisibility(video._id, e)}
+                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500/20 ${
+                                video.isPublic !== false ? 'bg-emerald-500' : 'bg-slate-300'
+                              }`}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                                  video.isPublic !== false ? 'translate-x-4' : 'translate-x-0'
+                                }`}
+                              />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg font-bold">
+                            <Globe size={12} className="text-emerald-600" />
+                            <span>Public</span>
+                          </div>
+                        )}
+
                         <div className="flex items-center bg-white px-2 py-1 rounded border border-gray-200 shadow-sm">
                           <Star size={12} className="text-amber-500 mr-1" fill="currentColor" />
                           <span className="font-bold text-gray-700 text-xs">{video.stars?.length || 0}</span>
                         </div>
+
                         {isOwner ? (
-                          <div className="flex items-center gap-3 ml-2">
+                          <div className="flex items-center gap-2 ml-1">
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
                                 navigate(`/video/${video._id}`);
                               }}
-                              className="text-[11px] font-bold text-gray-500 hover:text-gray-900 transition-colors border border-gray-200 px-2 py-1 rounded-md bg-white hover:bg-gray-50"
+                              className="text-[11px] font-bold text-gray-600 hover:text-gray-900 transition-colors border border-gray-200 px-2 py-1 rounded-md bg-white hover:bg-gray-50"
                             >
-                              Watch Video
+                              Watch
                             </button>
                             <span className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
                               Review AI →

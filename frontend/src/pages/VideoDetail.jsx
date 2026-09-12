@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { Target, MessageSquareQuote, Heart, ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, Star } from 'lucide-react';
+import { Target, MessageSquareQuote, Heart, ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, Star, Globe, Lock } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 
@@ -26,6 +26,8 @@ const VideoDetail = () => {
   
   const videoRef = useRef(null);
 
+  const isOwner = user && video && user._id === (video.user?._id || video.user);
+
   useEffect(() => {
     const fetchVideo = async () => {
       try {
@@ -39,6 +41,26 @@ const VideoDetail = () => {
     };
     fetchVideo();
   }, [id]);
+
+  const handleToggleVisibility = async () => {
+    if (!video || !user) return;
+    try {
+      const res = await axios.patch(
+        `${API_BASE_URL}/api/videos/${video._id}/visibility`,
+        {},
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
+      setVideo(prev => ({ ...prev, isPublic: res.data.isPublic }));
+      if (res.data.isPublic) {
+        toast.success('Speech is now Public (visible to community)!');
+      } else {
+        toast.success('Speech is now Hidden (Private to you)!');
+      }
+    } catch (err) {
+      console.error('Failed to toggle visibility:', err);
+      toast.error('Failed to update privacy settings');
+    }
+  };
 
   const submitReview = async (e) => {
     e.preventDefault();
@@ -254,21 +276,45 @@ const VideoDetail = () => {
       {/* Right Column: Info & Comments Panel */}
       <div className="w-full lg:w-[35%] xl:w-[30%] bg-white p-6 lg:p-8 flex flex-col h-full overflow-y-auto custom-scrollbar">
           
-        {/* Header: User Info */}
-        <div className="flex justify-between items-start mb-8 shrink-0">
+        {/* Header: User Info & Visibility Toggle */}
+        <div className="flex flex-wrap justify-between items-center gap-3 mb-6 pb-6 border-b border-slate-100 shrink-0">
           <Link to={`/user/${video.user?._id}`} className="flex items-center gap-4 hover:opacity-80 transition-opacity">
             {video.user?.avatar ? (
-              <img src={video.user.avatar} alt={video.user.name} className="w-14 h-14 rounded-full object-cover border-2 border-slate-100 shadow-sm" />
+              <img src={video.user.avatar} alt={video.user.name} className="w-12 h-12 rounded-full object-cover border-2 border-slate-100 shadow-sm" />
             ) : (
-              <div className="w-14 h-14 bg-gradient-to-br from-indigo-100 to-indigo-50 text-indigo-700 font-black text-2xl rounded-full flex items-center justify-center border-2 border-indigo-200 shadow-sm">
+              <div className="w-12 h-12 bg-gradient-to-br from-indigo-100 to-indigo-50 text-indigo-700 font-black text-xl rounded-full flex items-center justify-center border-2 border-indigo-200 shadow-sm">
                 {video.user?.name?.[0]?.toUpperCase() || 'A'}
               </div>
             )}
             <div>
-              <h3 className="font-bold text-slate-900 text-lg hover:underline">{video.user?.name || 'Anonymous Speaker'}</h3>
-              <p className="text-sm text-slate-500 font-medium">{new Date(video.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+              <h3 className="font-bold text-slate-900 text-base hover:underline">{video.user?.name || 'Anonymous Speaker'}</h3>
+              <p className="text-xs text-slate-500 font-medium">{new Date(video.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</p>
             </div>
           </Link>
+
+          {isOwner && (
+            <button
+              onClick={handleToggleVisibility}
+              title={video.isPublic !== false ? "Public - Click to hide from community" : "Hidden - Click to make public"}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-xs ${
+                video.isPublic !== false
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                  : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
+              }`}
+            >
+              {video.isPublic !== false ? (
+                <>
+                  <Globe size={14} className="text-emerald-600" />
+                  <span>Public</span>
+                </>
+              ) : (
+                <>
+                  <Lock size={14} className="text-slate-600" />
+                  <span>Hidden</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Topic Info */}
